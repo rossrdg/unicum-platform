@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unicum Digital — AI Content Operations Platform</title>
+</head>
+<body>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C9A96E;--gold-light:#E8CFA0;--teal:#2A7A6F;
+  --dark:#0D1117;--card:#161B22;--border:rgba(255,255,255,0.08);
+  --text:#E6EDF3;--muted:#7D8590;--danger:#C0392B;--sidebar-w:220px;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(--text);font-size:13px;display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:#0D1117;border-right:0.5px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh}
+.logo{padding:20px 16px 14px;border-bottom:0.5px solid var(--border)}
+.logo-name{font-size:15px;font-weight:500;color:var(--gold)}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.nav{padding:8px 0;flex:1}
+.nav-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:12px 16px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;color:var(--muted);cursor:pointer;transition:all .15s;font-size:12px}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.nav-item.active{color:var(--gold-light);background:rgba(201,169,110,0.1);border-right:2px solid var(--gold)}
+.sidebar-footer{padding:14px 16px;border-top:0.5px solid var(--border)}
+.agent-dots{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.agent-dot{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:#2ecc71}
+.dot.idle{background:rgba(255,255,255,0.15)}
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{padding:14px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#0D1117;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:16px;font-weight:500}
+.topbar-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.top-actions{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--text);transition:all .15s}
+.btn:hover{background:rgba(255,255,255,0.06)}
+.btn-primary{background:var(--gold);color:#0D1117;border-color:var(--gold)}
+.btn-primary:hover{background:var(--gold-light)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.content{padding:20px;flex:1}
+.section{display:none}.section.active{display:block}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.metric{background:#161B22;border:0.5px solid var(--border);border-radius:8px;padding:14px}
+.metric-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.metric-value{font-size:24px;font-weight:500;margin-top:6px}
+.metric-change{font-size:10px;color:var(--teal);margin-top:3px}
+.two-col{display:grid;grid-template-columns:1fr 280px;gap:14px}
+.panel{background:#161B22;border:0.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.panel-header{padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:13px;font-weight:500}
+.panel-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.campaign-item{padding:12px 16px;border-bottom:0.5px solid rgba(255,255,255,0.04);cursor:pointer;transition:background .1s}
+.campaign-item:hover{background:rgba(255,255,255,0.03)}
+.campaign-item:last-child{border-bottom:none}
+.ci-top{display:flex;align-items:flex-start;justify-content:space-between}
+.ci-name{font-size:12px;font-weight:500}
+.ci-client{font-size:11px;color:var(--muted);margin-top:2px}
+.ci-tags{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500}
+.tag-active{background:rgba(42,122,111,0.2);color:#5DCAA5}
+.tag-ch{background:rgba(255,255,255,0.06);color:var(--muted)}
+.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:3px 8px;border-radius:4px}
+.badge-review{background:rgba(201,169,110,0.15);color:var(--gold)}
+.badge-gen{background:rgba(83,74,183,0.2);color:#AFA9EC}
+.badge-live{background:rgba(42,122,111,0.2);color:#5DCAA5}
+.pipeline-step{padding:10px 16px;border-bottom:0.5px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:10px}
+.pipeline-step:last-child{border-bottom:none}
+.step-num{width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-done{background:rgba(42,122,111,0.3);color:#5DCAA5}
+.step-pending{background:rgba(255,255,255,0.06);color:var(--muted)}
+.step-name{font-size:12px;font-weight:500}
+.step-desc{font-size:10px;color:var(--muted)}
+.clients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.client-card{background:#161B22;border:0.5px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color .15s}
+.client-card:hover{border-color:rgba(201,169,110,0.4)}
+.client-card.add-new{border-style:dashed;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px;color:var(--muted);gap:6px}
+.client-card.add-new:hover{color:var(--gold);border-color:var(--gold)}
+.cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cc-avatar{width:36px;height:36px;border-radius:8px;background:rgba(201,169,110,0.15);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:var(--gold)}
+.cc-status{display:inline-flex;align-items:center;gap:4px;font-size:10px}
+.status-dot{width:5px;height:5px;border-radius:50%}
+.status-active .status-dot{background:#2ecc71}
+.status-paused .status-dot{background:var(--muted)}
+.cc-name{font-size:13px;font-weight:500;margin-bottom:3px}
+.cc-niche{font-size:11px;color:var(--muted)}
+.cc-meta{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);font-size:10px;color:var(--muted)}
+.cc-meta span{color:var(--text);font-weight:500}
+.filter-btn{padding:5px 12px;border-radius:6px;border:0.5px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.filter-btn.active{background:rgba(201,169,110,0.15);color:var(--gold);border-color:rgba(201,169,110,0.3)}
+.history-table{background:#161B22;border:0.5px solid var(--border);border-radius:8px;overflow:hidden}
+.ht-header{display:grid;grid-template-columns:2fr 1fr 80px 100px 90px;gap:12px;padding:10px 16px;border-bottom:0.5px solid var(--border);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ht-row{display:grid;grid-template-columns:2fr 1fr 80px 100px 90px;gap:12px;padding:10px 16px;border-bottom:0.5px solid rgba(255,255,255,0.04);align-items:center;cursor:pointer;transition:background .1s}
+.ht-row:hover{background:rgba(255,255,255,0.03)}
+.ht-row:last-child{border-bottom:none}
+.ht-title{font-size:12px;font-weight:500}
+.ht-client{font-size:11px;color:var(--muted)}
+.ht-score{font-size:13px;font-weight:500}
+.score-high{color:#5DCAA5}.score-mid{color:var(--gold)}.score-low{color:var(--danger)}
+.ht-date{font-size:11px;color:var(--muted)}
+.action-btns{display:flex;gap:4px}
+.action-btn{padding:3px 8px;border-radius:4px;border:0.5px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s}
+.action-btn.approve{border-color:rgba(42,122,111,0.4);color:#5DCAA5}
+.action-btn.approve:hover{background:rgba(42,122,111,0.2)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#161B22;border:0.5px solid rgba(255,255,255,0.12);border-radius:12px;width:520px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:18px 20px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:500}
+.modal-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0;line-height:1}
+.modal-body{padding:18px 20px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block}
+.form-input{width:100%;background:#0D1117;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:inherit}
+.form-input:focus{outline:none;border-color:rgba(201,169,110,0.5)}
+.form-select{width:100%;background:#0D1117;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:inherit;appearance:none}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.channel-cb{display:flex;align-items:center;gap:5px;padding:5px 10px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s}
+.channel-cb.checked{border-color:rgba(201,169,110,0.4);color:var(--gold);background:rgba(201,169,110,0.08)}
+.channel-checkboxes{display:flex;gap:6px;flex-wrap:wrap}
+.info-box{background:rgba(201,169,110,0.08);border:0.5px solid rgba(201,169,110,0.2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--gold-light);line-height:1.6;margin:14px 0}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:0.5px solid var(--border);margin-top:14px}
+.progress-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:8px;overflow:hidden}
+.progress-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 1s ease}
+.toast{display:none;position:fixed;bottom:24px;right:24px;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:500;z-index:400;background:var(--teal);color:white}
+.toast.error{background:var(--danger)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:15px;font-weight:500}
+.loading-state{text-align:center;padding:40px;color:var(--muted)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+/* DRAWER */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300}
+.drawer-overlay.open{display:block}
+.drawer{position:fixed;top:0;right:0;width:680px;max-width:100%;height:100vh;background:#161B22;border-left:0.5px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease}
+.drawer-overlay.open .drawer{transform:translateX(0)}
+.drawer-header{padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.drawer-title{font-size:14px;font-weight:500;margin-bottom:3px}
+.drawer-meta{font-size:11px;color:var(--muted)}
+.drawer-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:0;line-height:1;margin-left:12px;flex-shrink:0}
+.drawer-close:hover{color:var(--text)}
+.drawer-actions{display:flex;gap:6px;margin-top:10px}
+.drawer-tabs{display:flex;border-bottom:0.5px solid var(--border);flex-shrink:0;background:#0D1117}
+.drawer-tab{padding:10px 16px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.drawer-tab:hover{color:var(--text)}
+.drawer-tab.active{color:var(--gold-light);border-bottom-color:var(--gold)}
+.drawer-body{flex:1;overflow-y:auto;padding:20px}
+.content-block{background:#0D1117;border:0.5px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.content-block-label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.content-block-text{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.qa-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.qa-row:last-child{border-bottom:none}
+.qa-icon{font-size:14px;flex-shrink:0}
+.qa-pass{color:#5DCAA5}.qa-warn{color:var(--gold)}
+.qa-score-big{font-size:36px;font-weight:500;margin-bottom:4px}
+.score-high-color{color:#5DCAA5}.score-mid-color{color:var(--gold)}.score-low-color{color:var(--danger)}
+.hook-pill{display:inline-block;background:rgba(201,169,110,0.1);border:0.5px solid rgba(201,169,110,0.2);color:var(--gold-light);font-size:12px;padding:6px 12px;border-radius:6px;margin:3px;line-height:1.5}
+.visual-prompt{background:#0D1117;border:0.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+.vp-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+.vp-text{font-size:12px;color:#AFA9EC;line-height:1.6;font-style:italic}
+.copy-btn{background:rgba(255,255,255,0.06);border:0.5px solid var(--border);color:var(--muted);font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;transition:all .15s;float:right}
+.copy-btn:hover{color:var(--text)}
+.drawer-loading{text-align:center;padding:60px 20px;color:var(--muted)}
+</style>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-name">Unicum Digital</div>
+    <div class="logo-sub">Content Ops Platform</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-label">Работна среда</div>
+    <div class="nav-item active" onclick="showSection('dashboard',this)">▦ Дашборд</div>
+    <div class="nav-item" onclick="showSection('clients',this)">◎ Клиенти</div>
+    <div class="nav-item" onclick="showSection('history',this)">◈ История</div>
+    <div class="nav-label">Действия</div>
+    <div class="nav-item" onclick="openLauncher()">▷ Нова кампания</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Агенти онлайн</div>
+    <div class="agent-dots">
+      <div class="agent-dot"><span class="dot"></span> Стратег</div>
+      <div class="agent-dot"><span class="dot"></span> Copy</div>
+      <div class="agent-dot"><span class="dot"></span> Visual</div>
+      <div class="agent-dot"><span class="dot idle"></span> QA</div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="topbar-title">Дашборд</div>
+      <div class="topbar-sub" id="topbar-sub">Преглед на активни кампании</div>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-sm" onclick="loadData()">↻ Обнови</button>
+      <button class="btn btn-primary btn-sm" onclick="openLauncher()">+ Нова кампания</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section active" id="sec-dashboard">
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Кампании общо</div><div class="metric-value" id="m-total">—</div><div class="metric-change">Campaign History DB</div></div>
+        <div class="metric"><div class="metric-label">Чакат преглед</div><div class="metric-value" id="m-review">—</div><div class="metric-change">Нуждаят се от одобрение</div></div>
+        <div class="metric"><div class="metric-label">Одобрени</div><div class="metric-value" id="m-approved">—</div><div class="metric-change">Готови за публикуване</div></div>
+        <div class="metric"><div class="metric-label">Активни клиенти</div><div class="metric-value" id="m-clients">—</div><div class="metric-change">Brand Profiles</div></div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <div><div class="panel-title">Последни кампании</div><div class="panel-sub">От Campaign History</div></div>
+              <button class="btn btn-sm" onclick="showSection('history',document.querySelector('[onclick*=history]'))">Виж всички</button>
+            </div>
+            <div id="dashboard-campaigns"><div class="loading-state"><span class="spin">⟳</span> Зарежда...</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="panel-header"><div class="panel-title">Pipeline статус</div></div>
+            <div class="pipeline-step"><div class="step-num step-done">✓</div><div><div class="step-name">Brand Profiles</div><div class="step-desc">Notion DB активна</div></div></div>
+            <div class="pipeline-step"><div class="step-num step-done">✓</div><div><div class="step-name">Make Webhook</div><div class="step-desc">Готов за получаване</div></div></div>
+            <div class="pipeline-step"><div class="step-num step-done">✓</div><div><div class="step-name">4 AI агента</div><div class="step-desc">Strategy → Copy → Visual → QA</div></div></div>
+            <div class="pipeline-step"><div class="step-num step-done">✓</div><div><div class="step-name">Campaign History</div><div class="step-desc">Записва резултатите</div></div></div>
+            <div class="pipeline-step"><div class="step-num step-pending">5</div><div><div class="step-name">Human Review</div><div class="step-desc" style="color:var(--gold)">Чака твоето одобрение</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-clients">
+      <div class="section-header">
+        <div class="section-title">Brand Profiles</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddClient()">+ Нов клиент</button>
+      </div>
+      <div class="clients-grid" id="clients-grid"><div class="loading-state" style="grid-column:1/-1"><span class="spin">⟳</span> Зарежда...</div></div>
+    </div>
+
+    <div class="section" id="sec-history">
+      <div class="section-header">
+        <div class="section-title">Campaign History</div>
+        <div style="display:flex;gap:6px">
+          <button class="filter-btn active" onclick="filterHistory('all',this)">Всички</button>
+          <button class="filter-btn" onclick="filterHistory('Чака Review',this)">Чакат преглед</button>
+          <button class="filter-btn" onclick="filterHistory('Одобрено',this)">Одобрени</button>
+        </div>
+      </div>
+      <div class="history-table">
+        <div class="ht-header"><div>Кампания</div><div>Клиент</div><div>QA Score</div><div>Дата</div><div>Действие</div></div>
+        <div id="history-rows"><div class="loading-state"><span class="spin">⟳</span> Зарежда...</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- LAUNCHER -->
+<div class="overlay" id="launcher-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Нова кампания</div><div class="modal-sub">Избери клиент и конфигурирай кампанията</div></div>
+      <button class="modal-close" onclick="closeLauncher()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Клиент</label>
+        <select class="form-select" id="launch-client"><option value="">Зарежда клиенти...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Тип кампания</label>
+          <select class="form-select" id="launch-type">
+            <option>Промоционална оферта</option><option>Сезонна кампания</option>
+            <option>Продуктова кампания</option><option>Brand Awareness</option><option>Event промоция</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Приоритет</label>
+          <select class="form-select" id="launch-priority"><option>Нормален</option><option>Висок</option><option>Спешен</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание на кампанията</label>
+        <textarea class="form-input" id="launch-notes" rows="3" placeholder="Напр.: Лятна кампания с 20% отстъпка, валидна 1-30 юни..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Канали</label>
+        <div class="channel-checkboxes">
+          <div class="channel-cb checked" onclick="this.classList.toggle('checked')">Instagram</div>
+          <div class="channel-cb checked" onclick="this.classList.toggle('checked')">Facebook</div>
+          <div class="channel-cb" onclick="this.classList.toggle('checked')">Email</div>
+          <div class="channel-cb" onclick="this.classList.toggle('checked')">TikTok</div>
+          <div class="channel-cb" onclick="this.classList.toggle('checked')">LinkedIn</div>
+        </div>
+      </div>
+      <div class="info-box">
+        <strong>AI pipeline ще генерира:</strong><br>
+        Концепция → Копирайтинг → Визуални промптове → QA валидация<br>
+        <span style="opacity:.8">Резултатът се записва в Campaign History за Human Review.</span>
+      </div>
+      <div id="launch-progress" style="display:none">
+        <div style="font-size:11px;color:var(--gold);margin-bottom:4px" id="launch-status">Изпраща...</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm" onclick="closeLauncher()">Отказ</button>
+        <button class="btn btn-primary btn-sm" id="launch-btn" onclick="launchCampaign()">▷ Стартирай pipeline</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW CLIENT -->
+<div class="overlay" id="client-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Нов клиент</div><div class="modal-sub">Записва директно в Brand Profiles (Notion)</div></div>
+      <button class="modal-close" onclick="document.getElementById('client-overlay').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Име на клиента</label><input class="form-input" id="c-name" placeholder="напр. Ресторант Примера"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Ниша</label>
+          <select class="form-select" id="c-niche">
+            <option>Ресторант</option><option>Ритейл</option><option>Фитнес</option>
+            <option>Дентална клиника</option><option>Маркетинг агенция</option>
+            <option>Хотел</option><option>Недвижими имоти</option><option>Друго</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tone of Voice</label>
+          <select class="form-select" id="c-tone">
+            <option>Приятелски</option><option>Вдъхновяващ</option><option>Професионален</option>
+            <option>Луксозен</option><option>Семеен</option><option>Динамичен</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Основна аудитория</label><input class="form-input" id="c-audience" placeholder="напр. Семейства 30-50г. в София"></div>
+      <div class="form-group"><label class="form-label">Бранд послание</label><input class="form-input" id="c-message" placeholder="напр. Домашна кухня с ресторантско качество"></div>
+      <div class="form-group"><label class="form-label">Забранени думи</label><input class="form-input" id="c-forbidden" placeholder="напр. евтино, промоция"></div>
+      <div class="modal-footer">
+        <button class="btn btn-sm" onclick="document.getElementById('client-overlay').classList.remove('open')">Отказ</button>
+        <button class="btn btn-primary btn-sm" onclick="saveClient()">✦ Запази в Notion</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- DETAIL DRAWER -->
+<div class="drawer-overlay" id="detail-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="drawer" id="detail-drawer">
+    <div class="drawer-header">
+      <div style="flex:1;min-width:0">
+        <div class="drawer-title" id="detail-title">—</div>
+        <div class="drawer-meta" id="detail-meta">—</div>
+        <div class="drawer-actions">
+          <button class="btn btn-sm" id="detail-approve-btn" onclick="approveFromDetail()" style="display:none">✓ Одобри кампанията</button>
+          <button class="btn btn-sm" id="detail-approved-badge" style="display:none;opacity:.5;cursor:default">✓ Одобрена</button>
+        </div>
+      </div>
+      <button class="drawer-close" onclick="closeDetail()">×</button>
+    </div>
+    <div class="drawer-tabs">
+      <div class="drawer-tab active" onclick="switchDrawerTab('strategy',this)">Стратегия</div>
+      <div class="drawer-tab" onclick="switchDrawerTab('copy',this)">Копирайтинг</div>
+      <div class="drawer-tab" onclick="switchDrawerTab('visual',this)">Визуални промптове</div>
+      <div class="drawer-tab" onclick="switchDrawerTab('qa',this)">QA Отчет</div>
+    </div>
+    <div class="drawer-body" id="detail-body"><div class="drawer-loading">Зарежда...</div></div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api';
+let allClients = [], allHistory = [], currentFilter = 'all';
+
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  const titles = {dashboard:'Дашборд',clients:'Brand Profiles',history:'Campaign History'};
+  const subs = {dashboard:'Преглед на активни кампании',clients:'Управление на клиенти',history:'История на генерираните кампании'};
+  document.getElementById('topbar-title').textContent = titles[id]||id;
+  document.getElementById('topbar-sub').textContent = subs[id]||'';
+  if (id==='clients' && !allClients.length) loadClients();
+  if (id==='history' && !allHistory.length) loadHistory();
+  if (id==='dashboard') loadDashboard();
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast'+(isError?' error':'');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 3500);
+}
+
+async function api(path, opts={}) {
+  const r = await fetch(API + path, {headers:{'Content-Type':'application/json'}, ...opts});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function loadClients() {
+  const grid = document.getElementById('clients-grid');
+  try {
+    allClients = await api('/clients');
+    renderClients(allClients);
+    document.getElementById('m-clients').textContent = allClients.filter(c=>c.status==='Активен').length || allClients.length;
+    populateClientSelect(allClients);
+  } catch(e) {
+    grid.innerHTML = `<div class="loading-state">Грешка: ${e.message}</div>`;
+  }
+}
+
+function renderClients(clients) {
+  const grid = document.getElementById('clients-grid');
+  const initials = n => (n||'?').split(/[\s—\-]+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  grid.innerHTML = clients.map(c => `
+    <div class="client-card" onclick="openLauncherForClient('${c.id}')">
+      <div class="cc-top">
+        <div class="cc-avatar">${initials(c.name)}</div>
+        <div class="cc-status ${c.status==='Активен'?'status-active':'status-paused'}">
+          <span class="status-dot"></span>
+          <span style="font-size:10px;color:var(--muted)">${c.status||'Активен'}</span>
+        </div>
+      </div>
+      <div class="cc-name">${c.name||'Клиент'}</div>
+      <div class="cc-niche">${c.niche||''}</div>
+      <div class="cc-meta">Тон: <span>${c.tone||'—'}</span></div>
+    </div>`).join('') +
+    `<div class="client-card add-new" onclick="openAddClient()"><span style="font-size:24px">+</span><span style="font-size:12px">Добави клиент</span></div>`;
+}
+
+function populateClientSelect(clients) {
+  const sel = document.getElementById('launch-client');
+  sel.innerHTML = '<option value="">Избери клиент...</option>' +
+    clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+async function loadHistory() {
+  const rows = document.getElementById('history-rows');
+  try {
+    allHistory = await api('/campaigns');
+    renderHistory(allHistory);
+    document.getElementById('m-total').textContent = allHistory.length;
+    document.getElementById('m-review').textContent = allHistory.filter(h=>h.status==='Чака Review').length;
+    document.getElementById('m-approved').textContent = allHistory.filter(h=>h.status==='Одобрено').length;
+  } catch(e) {
+    rows.innerHTML = `<div class="loading-state">Грешка: ${e.message}</div>`;
+  }
+}
+
+function renderHistory(items) {
+  const rows = document.getElementById('history-rows');
+  const filtered = currentFilter==='all' ? items : items.filter(i=>i.status===currentFilter);
+  if (!filtered.length) { rows.innerHTML='<div class="loading-state">Няма записи</div>'; return; }
+  const sc = s => { const n=parseInt(s)||0; return n>=90?'score-high':n>=75?'score-mid':n>0?'score-low':''; };
+  rows.innerHTML = filtered.map(h => `
+    <div class="ht-row" onclick="openDetail('${h.id}')">
+      <div><div class="ht-title">${(h.title||'').replace('Campaign Output — ','').replace(/—\s*\d{2}\.\d{2}\.\d{4}/,'').trim().slice(0,40)||'Кампания'}</div></div>
+      <div class="ht-client">${h.client||'—'}</div>
+      <div class="ht-score ${sc(h.qa_score)}">${h.qa_score||'—'}</div>
+      <div class="ht-date">${h.date?h.date.slice(0,10):'—'}</div>
+      <div class="action-btns" onclick="event.stopPropagation()">
+        ${h.status==='Чака Review'?`<button class="action-btn approve" onclick="approveItem('${h.id}',event)">Одобри</button>`:`<span style="font-size:10px;color:var(--muted)">${h.status||''}</span>`}
+      </div>
+    </div>`).join('');
+}
+
+function filterHistory(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderHistory(allHistory);
+}
+
+async function approveItem(id, e) {
+  e.stopPropagation();
+  const btn = e.target; btn.textContent='...'; btn.disabled=true;
+  try {
+    await api(`/campaigns/${id}/approve`, {method:'POST'});
+    const item = allHistory.find(h=>h.id===id);
+    if (item) item.status='Одобрено';
+    renderHistory(allHistory);
+    showToast('Кампанията е одобрена');
+  } catch(e) { btn.textContent='Одобри'; btn.disabled=false; showToast('Грешка',true); }
+}
+
+async function loadDashboard() {
+  if (!allHistory.length) await loadHistory();
+  if (!allClients.length) await loadClients();
+  const recent = allHistory.slice(0,5);
+  const container = document.getElementById('dashboard-campaigns');
+  if (!recent.length) { container.innerHTML='<div class="loading-state">Няма кампании още</div>'; return; }
+  container.innerHTML = recent.map(h => `
+    <div class="campaign-item" onclick="openDetail('${h.id}')">
+      <div class="ci-top">
+        <div>
+          <div class="ci-name">${(h.title||'').replace('Campaign Output — ','').replace(/—\s*\d{2}\.\d{2}\.\d{4}/,'').trim().slice(0,45)||'Кампания'}</div>
+          <div class="ci-client">${h.client||'—'}</div>
+        </div>
+        <span class="badge ${h.status==='Чака Review'?'badge-review':h.status==='Одобрено'?'badge-live':'badge-gen'}">${h.status||'—'}</span>
+      </div>
+      <div class="ci-tags">
+        ${h.qa_score?`<span class="tag tag-active">QA ${h.qa_score}/100</span>`:''}
+        <span class="tag tag-ch">${h.date?h.date.slice(0,10):''}</span>
+      </div>
+    </div>`).join('');
+}
+
+function openLauncher() { if(!allClients.length) loadClients(); document.getElementById('launcher-overlay').classList.add('open'); }
+function openLauncherForClient(id) { openLauncher(); setTimeout(()=>{ const s=document.getElementById('launch-client'); if(s) s.value=id; },300); }
+function closeLauncher() {
+  document.getElementById('launcher-overlay').classList.remove('open');
+  document.getElementById('launch-progress').style.display='none';
+  document.getElementById('launch-btn').disabled=false;
+  document.getElementById('launch-btn').textContent='▷ Стартирай pipeline';
+  document.getElementById('progress-fill').style.width='0%';
+}
+
+async function launchCampaign() {
+  const clientId = document.getElementById('launch-client').value;
+  const type = document.getElementById('launch-type').value;
+  const notes = document.getElementById('launch-notes').value;
+  if (!clientId) { showToast('Избери клиент',true); return; }
+  const channels = [...document.querySelectorAll('.channel-cb.checked')].map(c=>c.textContent);
+  const btn = document.getElementById('launch-btn');
+  btn.disabled=true; btn.textContent='⟳ Стартира...';
+  document.getElementById('launch-progress').style.display='block';
+  const prog = document.getElementById('progress-fill');
+  const status = document.getElementById('launch-status');
+  status.textContent='Изпраща заявка...'; prog.style.width='20%';
+  try {
+    await api('/campaigns/launch', {method:'POST', body:JSON.stringify({brand_profile_id:clientId,campaign_type:type,campaign_notes:notes,channels})});
+    prog.style.width='40%'; status.textContent='Агент 1: Стратегия...';
+    await new Promise(r=>setTimeout(r,2000));
+    prog.style.width='65%'; status.textContent='Агент 2 & 3: Копирайтинг & Визуали...';
+    await new Promise(r=>setTimeout(r,2000));
+    prog.style.width='90%'; status.textContent='Агент 4: QA валидация...';
+    await new Promise(r=>setTimeout(r,1500));
+    prog.style.width='100%'; status.textContent='Готово!';
+    showToast('Pipeline стартиран — провери Campaign History след ~2 мин');
+    setTimeout(()=>{ closeLauncher(); allHistory=[]; loadHistory(); },2000);
+  } catch(e) { showToast('Грешка при стартиране',true); btn.disabled=false; btn.textContent='▷ Стартирай pipeline'; document.getElementById('launch-progress').style.display='none'; }
+}
+
+function openAddClient() { document.getElementById('client-overlay').classList.add('open'); }
+
+async function saveClient() {
+  const name = document.getElementById('c-name').value.trim();
+  if (!name) { showToast('Въведи име',true); return; }
+  try {
+    await api('/clients', {method:'POST', body:JSON.stringify({
+      name, niche:document.getElementById('c-niche').value,
+      tone:document.getElementById('c-tone').value,
+      audience:document.getElementById('c-audience').value,
+      message:document.getElementById('c-message').value,
+      forbidden:document.getElementById('c-forbidden').value
+    })});
+    document.getElementById('client-overlay').classList.remove('open');
+    showToast('Клиентът е добавен!');
+    allClients=[]; loadClients();
+  } catch(e) { showToast('Грешка: '+e.message,true); }
+}
+
+function loadData() { allClients=[]; allHistory=[]; loadDashboard(); showToast('Обновява...'); }
+
+// ── DETAIL DRAWER ─────────────────────────────────────────────────────────
+let currentDetailId = null;
+
+function parseJSON(raw) {
+  if (!raw) return null;
+  try {
+    const clean = raw.replace(/<br\s*\/?>/gi,'\n').replace(/\\"/g,'"').replace(/\\n/g,'\n').replace(/^[^{]*/,'').replace(/[^}]*$/,'');
+    return JSON.parse(clean);
+  } catch(e) { return null; }
+}
+
+async function openDetail(id) {
+  currentDetailId = id;
+  document.getElementById('detail-overlay').classList.add('open');
+  document.getElementById('detail-body').innerHTML = '<div class="drawer-loading"><span class="spin">⟳</span> Зарежда...</div>';
+  document.getElementById('detail-title').textContent = '—';
+  document.getElementById('detail-meta').textContent = '—';
+  document.getElementById('detail-approve-btn').style.display = 'none';
+  document.getElementById('detail-approved-badge').style.display = 'none';
+  document.querySelectorAll('.drawer-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.drawer-tab')[0].classList.add('active');
+  try {
+    const data = await api(`/campaigns/${id}`);
+    const titleClean = (data.title||'').replace('Campaign Output — ','').replace(/—\s*\d{2}\.\d{2}\.\d{4}/,'').trim();
+    document.getElementById('detail-title').textContent = titleClean||'Кампания';
+    document.getElementById('detail-meta').textContent = `${data.client||'—'} · ${data.date?data.date.slice(0,10):'—'} · QA ${data.qa_score||'—'}/100`;
+    if (data.status==='Чака Review') document.getElementById('detail-approve-btn').style.display='';
+    else if (data.status==='Одобрено') document.getElementById('detail-approved-badge').style.display='';
+    const drawer = document.getElementById('detail-drawer');
+    drawer.dataset.strategy = JSON.stringify(parseJSON(data.strategy)||{});
+    drawer.dataset.copy = JSON.stringify(parseJSON(data.copy)||{});
+    drawer.dataset.visual = JSON.stringify(parseJSON(data.visual)||{});
+    drawer.dataset.qa = JSON.stringify(parseJSON(data.qa_report)||{});
+    drawer.dataset.qaScore = data.qa_score||0;
+    renderDrawerTab('strategy');
+  } catch(e) { document.getElementById('detail-body').innerHTML=`<div class="drawer-loading">Грешка: ${e.message}</div>`; }
+}
+
+function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); currentDetailId=null; }
+
+function switchDrawerTab(tab, el) {
+  document.querySelectorAll('.drawer-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderDrawerTab(tab);
+}
+
+function renderDrawerTab(tab) {
+  const drawer = document.getElementById('detail-drawer');
+  const body = document.getElementById('detail-body');
+  if (tab==='strategy') {
+    const s = JSON.parse(drawer.dataset.strategy||'{}');
+    if (!s||!s.concept) { body.innerHTML='<div class="drawer-loading">Няма данни за стратегията.</div>'; return; }
+    body.innerHTML=`
+      <div class="content-block"><div class="content-block-label">Концепция</div>
+        <div class="content-block-text" style="font-size:16px;font-weight:500;color:var(--gold-light)">${s.concept}</div></div>
+      <div class="content-block"><div class="content-block-label">Основно послание</div>
+        <div class="content-block-text">${s.core_message||'—'}</div></div>
+      ${s.hooks&&s.hooks.length?`<div class="content-block"><div class="content-block-label">Hooks</div>
+        <div>${s.hooks.map(h=>`<span class="hook-pill">${h}</span>`).join('')}</div></div>`:''}
+      ${s.channel_plan?`
+      <div class="content-block"><div class="content-block-label">Instagram план</div><div class="content-block-text">${s.channel_plan.instagram||'—'}</div></div>
+      <div class="content-block"><div class="content-block-label">Facebook план</div><div class="content-block-text">${s.channel_plan.facebook||'—'}</div></div>`:''}`;
+  } else if (tab==='copy') {
+    const c = JSON.parse(drawer.dataset.copy||'{}');
+    if (!c||!c.instagram_caption) { body.innerHTML='<div class="drawer-loading">Няма данни за копирайтинга.</div>'; return; }
+    const cb = (label,text) => `<div class="content-block">
+      <div class="content-block-label" style="display:flex;align-items:center;justify-content:space-between">${label}
+        <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(text||'')}')">Копирай</button></div>
+      <div class="content-block-text">${text||'—'}</div></div>`;
+    body.innerHTML = cb('Instagram Caption',c.instagram_caption) +
+      (c.instagram_hashtags?cb('Instagram Hashtags',c.instagram_hashtags):'') +
+      cb('Facebook Post',c.facebook_post||'') +
+      `<div class="content-block"><div class="content-block-label">Email Subject Lines · A/B/C</div>
+        ${[c.email_subject_a,c.email_subject_b,c.email_subject_c].filter(Boolean).map((s,i)=>
+          `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)">
+            <span style="font-size:12px">${['A','B','C'][i]}: ${s}</span>
+            <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(s)}')">Копирай</button></div>`).join('')}</div>`;
+  } else if (tab==='visual') {
+    const v = JSON.parse(drawer.dataset.visual||'{}');
+    if (!v||!v.midjourney_prompt) { body.innerHTML='<div class="drawer-loading">Няма визуални промптове.</div>'; return; }
+    body.innerHTML=`
+      <div class="visual-prompt"><div class="vp-label" style="display:flex;align-items:center;justify-content:space-between">Midjourney Промпт
+        <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(v.midjourney_prompt)}')">Копирай</button></div>
+        <div class="vp-text">${v.midjourney_prompt}</div></div>
+      <div class="visual-prompt"><div class="vp-label" style="display:flex;align-items:center;justify-content:space-between">DALL-E 3 Промпт
+        <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(v.dalle_prompt||'')}')">Копирай</button></div>
+        <div class="vp-text">${v.dalle_prompt||'—'}</div></div>
+      ${v.style_notes?`<div class="content-block"><div class="content-block-label">Style Notes</div><div class="content-block-text">${v.style_notes}</div></div>`:''}
+      ${v.aspect_ratio_recommendation?`<div class="content-block"><div class="content-block-label">Aspect Ratio</div><div class="content-block-text">${v.aspect_ratio_recommendation}</div></div>`:''}`;
+  } else if (tab==='qa') {
+    const q = JSON.parse(drawer.dataset.qa||'{}');
+    const score = parseInt(drawer.dataset.qaScore)||q.qa_score||0;
+    const sc = score>=90?'score-high-color':score>=75?'score-mid-color':'score-low-color';
+    body.innerHTML=`
+      <div class="content-block" style="display:flex;align-items:center;gap:20px">
+        <div><div class="qa-score-big ${sc}">${score}<span style="font-size:16px;color:var(--muted)">/100</span></div>
+          <div style="font-size:11px;color:var(--muted)">Brand Consistency Score</div></div>
+        <div style="font-size:12px;color:var(--muted)">
+          Тон: <span style="color:${q.tone_check==='pass'?'#5DCAA5':'var(--danger)'}">${q.tone_check||'—'}</span><br>
+          CTA: <span style="color:${q.cta_check==='pass'?'#5DCAA5':'var(--danger)'}">${q.cta_check||'—'}</span><br>
+          Препоръка: <span style="color:var(--text)">${q.recommendation||'—'}</span></div></div>
+      ${q.issues&&q.issues.length?`<div class="content-block"><div class="content-block-label">Проблеми</div>
+        ${q.issues.map(i=>`<div class="qa-row"><span class="qa-icon qa-warn">⚠</span><div style="font-size:11px;color:var(--muted)">${i}</div></div>`).join('')}</div>`:''}
+      ${q.strengths&&q.strengths.length?`<div class="content-block"><div class="content-block-label">Силни страни</div>
+        ${q.strengths.map(s=>`<div class="qa-row"><span class="qa-icon qa-pass">✔</span><div style="font-size:11px;color:var(--muted)">${s}</div></div>`).join('')}</div>`:''}
+      ${q.suggested_improvements?`<div class="content-block"><div class="content-block-label">Препоръки</div><div class="content-block-text">${q.suggested_improvements}</div></div>`:''}`;
+  }
+}
+
+function copyText(btn, encoded) {
+  navigator.clipboard.writeText(decodeURIComponent(encoded)).then(()=>{ const o=btn.textContent; btn.textContent='✓'; setTimeout(()=>btn.textContent=o,1500); });
+}
+
+async function approveFromDetail() {
+  if (!currentDetailId) return;
+  const btn = document.getElementById('detail-approve-btn');
+  btn.textContent='...'; btn.disabled=true;
+  try {
+    await api(`/campaigns/${currentDetailId}/approve`, {method:'POST'});
+    btn.style.display='none';
+    document.getElementById('detail-approved-badge').style.display='';
+    const item = allHistory.find(h=>h.id===currentDetailId);
+    if (item) item.status='Одобрено';
+    renderHistory(allHistory);
+    showToast('Кампанията е одобрена');
+  } catch(e) { btn.textContent='✓ Одобри'; btn.disabled=false; showToast('Грешка',true); }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
