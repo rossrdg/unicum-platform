@@ -97,6 +97,7 @@ def get_clients():
                 "status": get_select(props.get("Статус", {})),
                 "audience": get_text(props.get("Основна аудитория", {})),
                 "message": get_text(props.get("Бранд послание", {})),
+                "forbidden": get_text(props.get("Забранени думи и теми", {})),
             })
         return jsonify(clients)
     except Exception as e:
@@ -175,6 +176,29 @@ def approve_campaign(campaign_id):
             page_id=campaign_id,
             properties={"Статус": {"select": {"name": "Одобрено"}}}
         )
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/clients/<client_id>", methods=["PATCH"])
+def update_client(client_id):
+    data = request.json
+    try:
+        props = {}
+        if data.get("name"):
+            props["Клиент"] = {"title": [{"text": {"content": data["name"]}}]}
+        if data.get("niche"):
+            props["Ниша"] = {"select": {"name": data["niche"]}}
+        if data.get("tone"):
+            props["Tone of Voice"] = {"select": {"name": data["tone"]}}
+        if "audience" in data:
+            props["Основна аудитория"] = {"rich_text": [{"text": {"content": data["audience"]}}]}
+        if "message" in data:
+            props["Бранд послание"] = {"rich_text": [{"text": {"content": data["message"]}}]}
+        if "forbidden" in data:
+            props["Забранени думи и теми"] = {"rich_text": [{"text": {"content": data["forbidden"]}}]}
+        notion.pages.update(page_id=client_id, properties=props)
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

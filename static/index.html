@@ -97,6 +97,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(-
 .ht-client{font-size:11px;color:var(--muted)}
 .ht-score{font-size:13px;font-weight:500}
 .score-high{color:#5DCAA5}.score-mid{color:var(--gold)}.score-low{color:var(--danger)}
+@keyframes progress-pulse{0%{width:15%}25%{width:40%}50%{width:65%}75%{width:85%}100%{width:95%}}
+.generating-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden}
+.generating-bar-fill{height:100%;background:var(--gold);border-radius:2px;animation:progress-pulse 8s ease-in-out infinite}
+.status-generating{background:rgba(83,74,183,0.2);color:#AFA9EC;font-size:10px;font-weight:500;padding:3px 8px;border-radius:4px;display:inline-flex;align-items:center;gap:5px}
 .ht-date{font-size:11px;color:var(--muted)}
 .action-btns{display:flex;gap:4px}
 .action-btn{padding:3px 8px;border-radius:4px;border:0.5px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s}
@@ -241,7 +245,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(-
 
     <div class="section" id="sec-history">
       <div class="section-header">
-        <div class="section-title">Campaign History</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="section-title">Campaign History</div>
+          <span id="history-client-badge" style="display:none;align-items:center;gap:5px;background:rgba(201,169,110,0.15);color:var(--gold);font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500">◎ <span></span></span>
+          <button id="history-clear-client" onclick="clearClientFilter()" style="display:none;align-items:center;gap:4px;background:none;border:0.5px solid var(--border);color:var(--muted);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer">× Всички клиенти</button>
+        </div>
         <div style="display:flex;gap:6px">
           <button class="filter-btn active" onclick="filterHistory('all',this)">Всички</button>
           <button class="filter-btn" onclick="filterHistory('Чака Review',this)">Чакат преглед</button>
@@ -316,7 +324,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(-
 <div class="overlay" id="client-overlay">
   <div class="modal">
     <div class="modal-header">
-      <div><div class="modal-title">Нов клиент</div><div class="modal-sub">Записва директно в Brand Profiles (Notion)</div></div>
+      <div><div class="modal-title" id="client-modal-title">Нов клиент</div><div class="modal-sub" id="client-modal-sub">Записва директно в Brand Profiles (Notion)</div></div>
       <button class="modal-close" onclick="document.getElementById('client-overlay').classList.remove('open')">×</button>
     </div>
     <div class="modal-body">
@@ -343,7 +351,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(-
       <div class="form-group"><label class="form-label">Забранени думи</label><input class="form-input" id="c-forbidden" placeholder="напр. евтино, промоция"></div>
       <div class="modal-footer">
         <button class="btn btn-sm" onclick="document.getElementById('client-overlay').classList.remove('open')">Отказ</button>
-        <button class="btn btn-primary btn-sm" onclick="saveClient()">✦ Запази в Notion</button>
+        <button class="btn btn-primary btn-sm" id="client-save-btn" onclick="saveClient()">✦ Запази в Notion</button>
       </div>
     </div>
   </div>
@@ -377,7 +385,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(-
 
 <script>
 const API = 'http://localhost:5000/api';
-let allClients = [], allHistory = [], currentFilter = 'all';
+let allClients = [], allHistory = [], currentFilter = 'all', currentClientFilter = null;
 
 function showSection(id, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -422,7 +430,7 @@ function renderClients(clients) {
   const grid = document.getElementById('clients-grid');
   const initials = n => (n||'?').split(/[\s—\-]+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
   grid.innerHTML = clients.map(c => `
-    <div class="client-card" onclick="openLauncherForClient('${c.id}')">
+    <div class="client-card" onclick="showClientCampaigns('${c.id}','${c.name}')">
       <div class="cc-top">
         <div class="cc-avatar">${initials(c.name)}</div>
         <div class="cc-status ${c.status==='Активен'?'status-active':'status-paused'}">
@@ -433,6 +441,11 @@ function renderClients(clients) {
       <div class="cc-name">${c.name||'Клиент'}</div>
       <div class="cc-niche">${c.niche||''}</div>
       <div class="cc-meta">Тон: <span>${c.tone||'—'}</span></div>
+      <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+        <button class="btn btn-sm" style="flex:1;font-size:10px" onclick="event.stopPropagation();showClientCampaigns('${c.id}','${c.name}')">◈ Кампании</button>
+        <button class="btn btn-sm" style="font-size:10px" onclick="event.stopPropagation();editClientById('${c.id}')">✎ Редакт.</button>
+        <button class="btn btn-primary btn-sm" style="font-size:10px" onclick="event.stopPropagation();openLauncherForClient('${c.id}')">+ Нова</button>
+      </div>
     </div>`).join('') +
     `<div class="client-card add-new" onclick="openAddClient()"><span style="font-size:24px">+</span><span style="font-size:12px">Добави клиент</span></div>`;
 }
@@ -458,10 +471,23 @@ async function loadHistory() {
 
 function renderHistory(items) {
   const rows = document.getElementById('history-rows');
-  const filtered = currentFilter==='all' ? items : items.filter(i=>i.status===currentFilter);
+  let filtered = currentClientFilter ? items.filter(i=>i.client===currentClientFilter) : items;
+  filtered = currentFilter==='all' ? filtered : filtered.filter(i=>i.status===currentFilter);
   if (!filtered.length) { rows.innerHTML='<div class="loading-state">Няма записи</div>'; return; }
   const sc = s => { const n=parseInt(s)||0; return n>=90?'score-high':n>=75?'score-mid':n>0?'score-low':''; };
-  rows.innerHTML = filtered.map(h => `
+  rows.innerHTML = filtered.map(h => {
+    if (h._generating) return `
+      <div class="ht-row" style="cursor:default;opacity:.8">
+        <div>
+          <div class="ht-title">${h.title||'Нова кампания'}</div>
+          <div class="generating-bar"><div class="generating-bar-fill"></div></div>
+        </div>
+        <div class="ht-client">${h.client||'—'}</div>
+        <div class="ht-score"><span class="status-generating">⚙ В процес...</span></div>
+        <div class="ht-date">${h.date?h.date.slice(0,10):'—'}</div>
+        <div class="action-btns"><span style="font-size:10px;color:var(--muted)">~2 мин</span></div>
+      </div>`;
+    return `
     <div class="ht-row" onclick="openDetail('${h.id}')">
       <div><div class="ht-title">${(h.title||'').replace('Campaign Output — ','').replace(/—\s*\d{2}\.\d{2}\.\d{4}/,'').replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,'').replace(/^[0-9a-f]{32}/i,'').trim().slice(0,40)||'Кампания'}</div></div>
       <div class="ht-client">${h.client||'—'}</div>
@@ -470,13 +496,32 @@ function renderHistory(items) {
       <div class="action-btns" onclick="event.stopPropagation()">
         ${h.status==='Чака Review'?`<button class="action-btn approve" onclick="approveItem('${h.id}',event)">Одобри</button>`:`<span style="font-size:10px;color:var(--muted)">${h.status||''}</span>`}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function filterHistory(f, el) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
+  renderHistory(allHistory);
+}
+
+function showClientCampaigns(clientId, clientName) {
+  currentClientFilter = clientName;
+  // Update history section title
+  document.getElementById('history-client-badge').querySelector('span').textContent = clientName;
+  document.getElementById('history-client-badge').style.display = 'inline-flex';
+  document.getElementById('history-clear-client').style.display = 'inline-flex';
+  // Navigate to history
+  showSection('history', document.querySelector('[onclick*=history]'));
+  renderHistory(allHistory);
+}
+
+function clearClientFilter() {
+  currentClientFilter = null;
+  document.getElementById('history-client-badge').style.display = 'none';
+  document.getElementById('history-clear-client').style.display = 'none';
   renderHistory(allHistory);
 }
 
@@ -530,6 +575,7 @@ async function launchCampaign() {
   const notes = document.getElementById('launch-notes').value;
   if (!clientId) { showToast('Избери клиент',true); return; }
   const channels = [...document.querySelectorAll('.channel-cb.checked')].map(c=>c.textContent);
+  const clientName = document.getElementById('launch-client').options[document.getElementById('launch-client').selectedIndex].text;
   const btn = document.getElementById('launch-btn');
   btn.disabled=true; btn.textContent='⟳ Стартира...';
   document.getElementById('launch-progress').style.display='block';
@@ -538,19 +584,102 @@ async function launchCampaign() {
   status.textContent='Изпраща заявка...'; prog.style.width='20%';
   try {
     await api('/campaigns/launch', {method:'POST', body:JSON.stringify({brand_profile_id:clientId,campaign_type:type,campaign_notes:notes,channels})});
-    prog.style.width='40%'; status.textContent='Агент 1: Стратегия...';
-    await new Promise(r=>setTimeout(r,2000));
-    prog.style.width='65%'; status.textContent='Агент 2 & 3: Копирайтинг & Визуали...';
-    await new Promise(r=>setTimeout(r,2000));
-    prog.style.width='90%'; status.textContent='Агент 4: QA валидация...';
-    await new Promise(r=>setTimeout(r,1500));
-    prog.style.width='100%'; status.textContent='Готово!';
-    showToast('Pipeline стартиран — провери Campaign History след ~2 мин');
-    setTimeout(()=>{ closeLauncher(); allHistory=[]; loadHistory(); },2000);
+    // Close launcher and immediately show in-progress in history
+    closeLauncher();
+    const tempId = 'generating-' + Date.now();
+    const tempItem = {id:tempId, title:type, client:clientName, qa_score:null, status:'В процес', date:new Date().toISOString(), _generating:true};
+    allHistory = [tempItem, ...allHistory];
+    // Navigate to history immediately
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('sec-history').classList.add('active');
+    document.getElementById('topbar-title').textContent = 'Campaign History';
+    document.getElementById('topbar-sub').textContent = 'История на генерираните кампании';
+    // Mark history nav item active
+    document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.includes('История')) n.classList.add('active'); });
+    renderHistory(allHistory);
+    // Poll for completion — reload every 15s up to 3 times
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      try {
+        const fresh = await api('/campaigns');
+        // Check if new real record appeared
+        const newReal = fresh.find(h => !allHistory.find(old => old.id === h.id && !old._generating));
+        if (newReal || attempts >= 4) {
+          clearInterval(poll);
+          allHistory = fresh;
+          renderHistory(allHistory);
+          document.getElementById('m-total').textContent = fresh.length;
+          document.getElementById('m-review').textContent = fresh.filter(h=>h.status==='Чака Review').length;
+          document.getElementById('m-approved').textContent = fresh.filter(h=>h.status==='Одобрено').length;
+          if (newReal) showToast('Кампанията е генерирана успешно!');
+        }
+      } catch(e) { clearInterval(poll); }
+    }, 15000);
   } catch(e) { showToast('Грешка при стартиране',true); btn.disabled=false; btn.textContent='▷ Стартирай pipeline'; document.getElementById('launch-progress').style.display='none'; }
 }
 
-function openAddClient() { document.getElementById('client-overlay').classList.add('open'); }
+function openAddClient() {
+  // Reset to "new" mode
+  document.getElementById('client-modal-title').textContent = 'Нов клиент';
+  document.getElementById('client-modal-sub').textContent = 'Записва директно в Brand Profiles (Notion)';
+  document.getElementById('client-save-btn').textContent = '✦ Запази в Notion';
+  document.getElementById('client-save-btn').onclick = saveClient;
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-audience').value = '';
+  document.getElementById('c-message').value = '';
+  document.getElementById('c-forbidden').value = '';
+  document.getElementById('c-niche').value = 'Ресторант';
+  document.getElementById('c-tone').value = 'Приятелски';
+  document.getElementById('client-overlay').classList.add('open');
+}
+
+function editClientById(id) {
+  const client = allClients.find(c => c.id === id);
+  if (!client) { showToast('Клиентът не е намерен', true); return; }
+  editClient(client);
+}
+
+function editClient(client) {
+  document.getElementById('client-modal-title').textContent = 'Редактиране на клиент';
+  document.getElementById('client-modal-sub').textContent = client.name;
+  document.getElementById('client-save-btn').textContent = '✦ Запази промените';
+  document.getElementById('client-save-btn').onclick = () => updateClient(client.id);
+  // Pre-fill fields
+  document.getElementById('c-name').value = client.name || '';
+  document.getElementById('c-audience').value = client.audience || '';
+  document.getElementById('c-message').value = client.message || '';
+  document.getElementById('c-forbidden').value = client.forbidden || '';
+  // Set selects
+  const nicheOpts = document.getElementById('c-niche').options;
+  for (let o of nicheOpts) { if (o.value === client.niche) { o.selected = true; break; } }
+  const toneOpts = document.getElementById('c-tone').options;
+  for (let o of toneOpts) { if (o.value === client.tone) { o.selected = true; break; } }
+  document.getElementById('client-overlay').classList.add('open');
+}
+
+async function updateClient(id) {
+  const btn = document.getElementById('client-save-btn');
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    await api(`/clients/${id}`, {method:'PATCH', body:JSON.stringify({
+      name: document.getElementById('c-name').value.trim(),
+      niche: document.getElementById('c-niche').value,
+      tone: document.getElementById('c-tone').value,
+      audience: document.getElementById('c-audience').value,
+      message: document.getElementById('c-message').value,
+      forbidden: document.getElementById('c-forbidden').value
+    })});
+    document.getElementById('client-overlay').classList.remove('open');
+    showToast('Клиентът е обновен!');
+    allClients = []; loadClients();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, true);
+  } finally {
+    btn.textContent = '✦ Запази промените'; btn.disabled = false;
+  }
+}
 
 async function saveClient() {
   const name = document.getElementById('c-name').value.trim();
