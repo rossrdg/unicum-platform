@@ -50,9 +50,17 @@ def get_date(prop):
 
 def get_url(prop):
     try:
+        if not prop:
+            return ""
         return prop.get("url") or ""
     except Exception:
         return ""
+
+def get_multi_select(prop):
+    try:
+        return [item["name"] for item in prop.get("multi_select", [])]
+    except Exception:
+        return []
 
 def get_relation_name(prop):
     try:
@@ -85,18 +93,29 @@ def get_clients():
         results = notion.databases.query(database_id=NOTION_DB_BRAND).get("results", [])
         clients = []
         for page in results:
-            props = page.get("properties", {})
-            clients.append({
-                "id": page["id"],
-                "name": get_title(props.get("Клиент", {})),
-                "niche": get_select(props.get("Ниша", {})),
-                "tone": get_select(props.get("Tone of Voice", {})),
-                "status": get_select(props.get("Статус", {})),
-                "audience": get_text(props.get("Основна аудитория", {})),
-                "message": get_text(props.get("Бранд послание", {})),
-                "website_url": get_url(props.get("Website URL", {})),
-                "fb_page": get_text(props.get("Facebook Page", {})),
-            })
+            try:
+                props = page.get("properties", {})
+                clients.append({
+                    "id": page["id"],
+                    "name": get_title(props.get("Клиент", {})),
+                    "niche": get_select(props.get("Ниша", {})),
+                    "tone": get_select(props.get("Tone of Voice", {})),
+                    "status": get_select(props.get("Статус", {})),
+                    "audience": get_text(props.get("Основна аудитория", {})),
+                    "message": get_text(props.get("Бранд послание", {})),
+                    "forbidden": get_text(props.get("Забранени думи и теми", {})),
+                    "competitors": get_text(props.get("Конкуренти", {})),
+                    "color_palette": get_text(props.get("Цветова палитра", {})),
+                    "sample_tone": get_text(props.get("Примерни добри текстове", {})),
+                    "channels": get_multi_select(props.get("Активни канали", {})),
+                    "website_url": get_url(props.get("Website URL", {})),
+                    "fb_page": get_text(props.get("Facebook Page", {})),
+                })
+            except Exception as page_err:
+                clients.append({"id": page.get("id","?"), "name": "ERROR: " + str(page_err),
+                                 "niche":"","tone":"","status":"","audience":"","message":"",
+                                 "forbidden":"","competitors":"","color_palette":"",
+                                 "sample_tone":"","website_url":"","fb_page":""})
         return jsonify(clients)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -108,18 +127,31 @@ def create_client():
     try:
         properties = {
             "Клиент": {"title": [{"text": {"content": data.get("name", "")}}]},
-            "Ниша": {"select": {"name": data.get("niche", "")}},
-            "Tone of Voice": {"select": {"name": data.get("tone", "")}},
-            "Основна аудитория": {"rich_text": [{"text": {"content": data.get("audience", "")}}]},
-            "Бранд послание": {"rich_text": [{"text": {"content": data.get("message", "")}}]},
-            "Забранени думи и теми": {"rich_text": [{"text": {"content": data.get("forbidden", "")}}]},
             "Статус": {"select": {"name": "Активен"}},
         }
-        # Add optional URL fields only if provided
-        if data.get("website_url"):
-            properties["Website URL"] = {"url": data["website_url"]}
-        if data.get("fb_page"):
-            properties["Facebook Page"] = {"rich_text": [{"text": {"content": data["fb_page"]}}]}
+        # Select fields — skip if empty to avoid Notion API errors
+        if data.get("niche"):
+            properties["Ниша"] = {"select": {"name": data["niche"]}}
+        if data.get("tone"):
+            properties["Tone of Voice"] = {"select": {"name": data["tone"]}}
+        # Multi-select: Активни канали
+        if data.get("channels"):
+            properties["Активни канали"] = {
+                "multi_select": [{"name": ch} for ch in data["channels"]]
+            }
+
+        # Rich text fields — all optional
+        rt_map = {
+            "Основна аудитория": data.get("audience", ""),
+            "Бранд послание": data.get("message", ""),
+            "Забранени думи и теми": data.get("forbidden", ""),
+            "Конкуренти": data.get("competitors", ""),
+            "Цветова палитра": data.get("color_palette", ""),
+            "Примерни добри текстове": data.get("sample_tone", ""),
+        }
+        for notion_key, value in rt_map.items():
+            if value:
+                properties[notion_key] = {"rich_text": [{"text": {"content": truncate(value)}}]}
 
         notion.pages.create(parent={"database_id": NOTION_DB_BRAND}, properties=properties)
         return jsonify({"success": True})
@@ -141,6 +173,9 @@ def get_client_detail(client_id):
             "audience": get_text(props.get("Основна аудитория", {})),
             "message": get_text(props.get("Бранд послание", {})),
             "forbidden": get_text(props.get("Забранени думи и теми", {})),
+            "competitors": get_text(props.get("Конкуренти", {})),
+            "color_palette": get_text(props.get("Цветова палитра", {})),
+            "sample_tone": get_text(props.get("Примерни добри текстове", {})),
             "website_url": get_url(props.get("Website URL", {})),
             "fb_page": get_text(props.get("Facebook Page", {})),
         })
@@ -153,24 +188,28 @@ def update_client(client_id):
     data = request.json
     try:
         properties = {}
-        field_map = {
-            "tone": ("Tone of Voice", "select"),
-            "niche": ("Ниша", "select"),
-            "audience": ("Основна аудитория", "rich_text"),
-            "message": ("Бранд послание", "rich_text"),
-            "forbidden": ("Забранени думи и теми", "rich_text"),
+        # Select fields
+        if data.get("niche"):
+            properties["Ниша"] = {"select": {"name": data["niche"]}}
+        if data.get("tone"):
+            properties["Tone of Voice"] = {"select": {"name": data["tone"]}}
+        # Multi-select channels
+        if data.get("channels") is not None:
+            properties["Активни канали"] = {
+                "multi_select": [{"name": ch} for ch in data["channels"]]
+            }
+        # Rich text fields
+        rt_map = {
+            "Основна аудитория": data.get("audience", ""),
+            "Бранд послание": data.get("message", ""),
+            "Забранени думи и теми": data.get("forbidden", ""),
+            "Конкуренти": data.get("competitors", ""),
+            "Цветова палитра": data.get("color_palette", ""),
+            "Примерни добри текстове": data.get("sample_tone", ""),
         }
-        for key, (notion_key, prop_type) in field_map.items():
-            if key in data:
-                if prop_type == "select":
-                    properties[notion_key] = {"select": {"name": data[key]}}
-                else:
-                    properties[notion_key] = {"rich_text": [{"text": {"content": truncate(data[key])}}]}
-
-        if "website_url" in data:
-            properties["Website URL"] = {"url": data["website_url"] or None}
-        if "fb_page" in data:
-            properties["Facebook Page"] = {"rich_text": [{"text": {"content": data["fb_page"]}}]}
+        for notion_key, value in rt_map.items():
+            if value is not None:
+                properties[notion_key] = {"rich_text": [{"text": {"content": truncate(str(value))}}]}
 
         notion.pages.update(page_id=client_id, properties=properties)
         return jsonify({"success": True})
@@ -223,17 +262,23 @@ def apply_analysis():
 
     try:
         properties = {}
+        # Select fields
         if analysis.get("tone_of_voice"):
-            # Map to select — use first word if free-form
             properties["Tone of Voice"] = {"select": {"name": analysis["tone_of_voice"][:100]}}
-        if analysis.get("audience"):
-            properties["Основна аудитория"] = {"rich_text": [{"text": {"content": truncate(analysis["audience"])}}]}
-        if analysis.get("brand_message"):
-            properties["Бранд послание"] = {"rich_text": [{"text": {"content": truncate(analysis["brand_message"])}}]}
-        if analysis.get("forbidden_words"):
-            properties["Забранени думи и теми"] = {"rich_text": [{"text": {"content": truncate(analysis["forbidden_words"])}}]}
         if analysis.get("niche"):
             properties["Ниша"] = {"select": {"name": analysis["niche"][:100]}}
+        # Rich text fields
+        rt_map = {
+            "Основна аудитория": analysis.get("audience", ""),
+            "Бранд послание": analysis.get("brand_message", ""),
+            "Забранени думи и теми": analysis.get("forbidden_words", ""),
+            "Конкуренти": analysis.get("competitors", ""),
+            "Цветова палитра": analysis.get("color_palette", ""),
+            "Примерни добри текстове": analysis.get("sample_tone", ""),
+        }
+        for notion_key, value in rt_map.items():
+            if value:
+                properties[notion_key] = {"rich_text": [{"text": {"content": truncate(value)}}]}
 
         notion.pages.update(page_id=client_id, properties=properties)
         return jsonify({"success": True})
@@ -310,6 +355,56 @@ def launch_campaign():
 
 
 # ── Debug ─────────────────────────────────────────────────────────────────────
+
+@app.route("/api/brand/debug-website", methods=["POST"])
+def debug_website_analysis():
+    """Returns both prose and JSON for debugging."""
+    data = request.json
+    website_url = data.get("website_url", "").strip()
+    if not website_url:
+        return jsonify({"error": "website_url required"}), 400
+
+    from brand_analysis import (_sanitize, _step1_prose_analysis,
+                                 _step2_extract_json, FIRECRAWL_API_KEY)
+    import requests as r
+    import time
+
+    headers = {
+        "Authorization": "Bearer " + FIRECRAWL_API_KEY,
+        "Content-Type": "application/json"
+    }
+    try:
+        crawl = r.post("https://api.firecrawl.dev/v1/crawl",
+            json={"url": website_url, "limit": 10,
+                  "scrapeOptions": {"formats": ["markdown"]}},
+            headers=headers, timeout=30)
+        crawl.raise_for_status()
+        job_id = crawl.json().get("id")
+        status_url = "https://api.firecrawl.dev/v1/crawl/" + job_id
+        status_data = {}
+        for _ in range(60):
+            time.sleep(3)
+            status_data = r.get(status_url, headers=headers, timeout=15).json()
+            if status_data.get("status") == "completed":
+                break
+
+        combined = ""
+        for page in status_data.get("data", []):
+            title = page.get("metadata", {}).get("title", "")
+            markdown = page.get("markdown", "")[:1500]
+            combined += "\n--- " + title + " ---\n" + markdown
+        combined = _sanitize(combined, max_chars=7000)
+
+        prose = _step1_prose_analysis(combined, "sayt")
+        json_result = _step2_extract_json(prose)
+
+        return jsonify({
+            "raw_text_length": len(combined),
+            "prose_analysis": prose,
+            "json_result": json_result
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/debug/<page_id>", methods=["GET"])
 def debug_page(page_id):
