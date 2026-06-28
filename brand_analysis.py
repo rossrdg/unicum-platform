@@ -16,9 +16,10 @@ GEMINI_API_KEY    = os.getenv("GEMINI_API_KEY")
 
 # Primary model with fallback
 GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
-    "gemini-2.5-flash",
 ]
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 
@@ -26,6 +27,9 @@ _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "brand_schema.json")
 with open(_SCHEMA_PATH, encoding="utf-8") as _f:
     _SCHEMA = json.load(_f)
 BRAND_JSON_SCHEMA = json.dumps(_SCHEMA, ensure_ascii=False, indent=2)
+
+ANALYSIS_TXT_PATH = os.path.join(os.path.dirname(__file__), "brand_analysis_temp.txt")
+
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -78,7 +82,7 @@ def _extract_json(raw):
     raise ValueError("Gemini returned invalid JSON: " + raw[:300])
 
 
-def _gemini_call(prompt, system_prompt, max_tokens=1000):
+def _gemini_call(prompt, system_prompt, max_tokens=4000):
     """Gemini REST call with model fallback."""
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY not found in .env")
@@ -112,31 +116,29 @@ def _gemini_call(prompt, system_prompt, max_tokens=1000):
 
 
 def _step1_prose_analysis(raw_content, source_type):
-    """Step 1: Free-form brand analysis - returns detailed Bulgarian prose."""
+    """Step 1: Structured key-value brand summary — compact, never truncated."""
     system = (
-        "You are an expert brand analyst. "
-        "Analyze the provided content and write a detailed brand analysis in Bulgarian (Cyrillic). "
-        "Be thorough and specific. Write at least 300 words."
+        "You are a brand analyst. Extract brand information concisely. "
+        "Answer each point in 1-3 sentences maximum. Write in Bulgarian Cyrillic. "
+        "Never write more than 350 words total."
     )
     prompt = (
-        "Analyze the following " + source_type + " content and write a detailed brand analysis in Bulgarian.\n\n"
-        "Cover ALL of these points in detail:\n"
-        "1. What does the business offer (services/products) - be specific\n"
-        "2. Communication tone - how do they talk to customers, what language style\n"
-        "3. Target audience - age, interests, location, lifestyle\n"
-        "4. Core brand message and promise to customers\n"
-        "5. Words/phrases the brand should NEVER use (that would seem cheap or low-quality)\n"
-        "6. Main competitors of this type of business\n"
-        "7. Visual style and color palette if visible\n\n"
-        "Write the analysis in Bulgarian Cyrillic. Be specific and detailed for each point.\n\n"
-        "CONTENT TO ANALYZE:\n" + raw_content
+        "Analyze this " + source_type + " content. Answer each point in 1-3 sentences in Bulgarian:\n\n"
+        "УСЛУГИ: (какво точно предлага бизнесът)\n"
+        "ТОН: (как комуникира с клиентите, стил)\n"
+        "АУДИТОРИЯ: (възраст, интереси, локация)\n"
+        "ПОСЛАНИЕ: (основното обещание към клиентите)\n"
+        "ЗАБРАНЕНИ ДУМИ: (думи/фрази, неподходящи за бранда)\n"
+        "КОНКУРЕНТИ: (конкретни конкуренти на този тип бизнес)\n"
+        "ВИЗУАЛЕН СТИЛ: (цветове, визуален стил ако е видимо)\n\n"
+        "CONTENT:\n" + raw_content[:6000]
     )
-    return _gemini_call(prompt, system, max_tokens=2000)
+    return _gemini_call(prompt, system, max_tokens=4000)
 
 
 # Exact allowed values for select fields
 TONE_OPTIONS = ["Приятелски", "Вдъхновяващ", "Професионален", "Луксозен", "Семеен", "Динамичен"]
-NICHE_OPTIONS = ["Ресторант", "Ритейл", "Фитнес", "Дентална клиника", "Маркетинг агенция", "Хотел", "Недвижими имоти", "Друго"]
+NICHE_OPTIONS = ["Ресторант", "Ритейл", "Фитнес", "Футболна_Академия", "Дентална клиника", "Маркетинг агенция", "Хотел", "Недвижими имоти", "Друго"]
 
 def _step2_extract_json(prose_analysis):
     """Step 2: Extract structured JSON from the prose analysis."""
@@ -162,7 +164,8 @@ def _step2_extract_json(prose_analysis):
         "- competitors: Bulgarian Cyrillic, comma-separated names, max 120 chars\n"
         "- color_palette: hex codes with descriptions, max 120 chars\n"
         "- sample_tone: one example sentence in brand voice, Bulgarian Cyrillic, max 160 chars\n"
-        "- If a field cannot be determined, make a reasonable inference\n\n"
+        "- If a field cannot be determined, make a reasonable inference\n"
+        "- niche: if business is sport school, academy, club or any activity NOT in the list -> use Друго\n\n"
         "Return ONLY this JSON (no other text):\n"
         "{\n"
         "  \"tone_of_voice\": \"<one of: " + tone_list + ">\",\n"
@@ -176,7 +179,7 @@ def _step2_extract_json(prose_analysis):
         "}\n\n"
         "BRAND ANALYSIS:\n" + prose_analysis
     )
-    raw = _gemini_call(prompt, system, max_tokens=1500)
+    raw = _gemini_call(prompt, system, max_tokens=4000)
     result = _extract_json(raw)
 
     # Post-process: normalize tone_of_voice and niche to exact allowed values
@@ -243,10 +246,16 @@ def analyze_website_for_brand(website_url):
     if not combined.strip():
         raise ValueError("Firecrawl returned empty result")
 
-    # 4. Two-step Gemini analysis
-    prose = _step1_prose_analysis(combined, "sayt")
-    print(prose)
-    return _step2_extract_json(prose)
+    # 4. Step 1: prose analysis
+    prose = _step1_prose_analysis(combined, "уебсайт")
+
+    # 5. Write to .txt (overwrite — fresh start per client)
+    with open(ANALYSIS_TXT_PATH, "w", encoding="utf-8") as f:
+        f.write("=== АНАЛИЗ НА УЕБСАЙТ ===\n\n")
+        f.write(prose)
+        f.write("\n\n")
+
+    return {"status": "website_done", "chars": len(prose)}
 
 
 def analyze_facebook_for_brand(fb_page):
@@ -306,6 +315,48 @@ def analyze_facebook_for_brand(fb_page):
         + _sanitize("\n---\n".join(posts_text), 4000)
     )
 
-    # Two-step Gemini analysis
-    prose = _step1_prose_analysis(combined, "Facebook stranica")
-    return _step2_extract_json(prose)
+    # Step 1: prose analysis
+    prose = _step1_prose_analysis(combined, "Facebook страница")
+
+    # Append to .txt (след website анализа ако го има, иначе нов файл)
+    mode = "a" if os.path.exists(ANALYSIS_TXT_PATH) else "w"
+    with open(ANALYSIS_TXT_PATH, mode, encoding="utf-8") as f:
+        f.write("=== АНАЛИЗ НА FACEBOOK СТРАНИЦА ===\n\n")
+        f.write(prose)
+        f.write("\n\n")
+
+    return {"status": "facebook_done", "chars": len(prose)}
+
+
+def extract_combined_brand_json():
+    """
+    Чете brand_analysis_temp.txt и прави финален JSON extraction
+    от обединения анализ на website + Facebook.
+    Изтрива .txt файла след успешна екстракция.
+    """
+    if not os.path.exists(ANALYSIS_TXT_PATH):
+        raise ValueError("Няма записан анализ. Пуснете поне един от анализите.")
+
+    with open(ANALYSIS_TXT_PATH, "r", encoding="utf-8") as f:
+        full_analysis = f.read()
+
+    if not full_analysis.strip():
+        raise ValueError("Файлът с анализ е празен.")
+
+    result = _step2_extract_json(full_analysis[:10000])
+
+    try:
+        os.remove(ANALYSIS_TXT_PATH)
+    except Exception:
+        pass
+
+    return result
+
+
+def clear_analysis_file():
+    """Изтрива временния .txt файл (при отказ от онбординга)."""
+    try:
+        if os.path.exists(ANALYSIS_TXT_PATH):
+            os.remove(ANALYSIS_TXT_PATH)
+    except Exception:
+        pass

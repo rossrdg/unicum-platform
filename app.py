@@ -221,7 +221,7 @@ def update_client(client_id):
 
 @app.route("/api/brand/analyze-website", methods=["POST"])
 def analyze_website():
-    """Crawl website with Firecrawl, analyze with Gemini, return brand JSON."""
+    """Crawl website -> prose -> записва в .txt. Връща статус."""
     data = request.json
     website_url = data.get("website_url", "").strip()
     if not website_url:
@@ -237,7 +237,7 @@ def analyze_website():
 
 @app.route("/api/brand/analyze-facebook", methods=["POST"])
 def analyze_facebook():
-    """Scrape FB page with Apify, analyze with Gemini, return brand JSON."""
+    """Scrape FB -> prose -> append към .txt. Връща статус."""
     data = request.json
     fb_page = data.get("fb_page", "").strip()
     if not fb_page:
@@ -251,6 +251,25 @@ def analyze_facebook():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/brand/analyze-combined", methods=["POST"])
+def analyze_combined():
+    """Чете .txt с натрупаните анализи -> финален JSON extraction."""
+    from brand_analysis import extract_combined_brand_json
+    try:
+        result = extract_combined_brand_json()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/brand/clear-analysis", methods=["POST"])
+def clear_analysis():
+    """Изтрива временния .txt файл (при отказ от онбординга)."""
+    from brand_analysis import clear_analysis_file
+    clear_analysis_file()
+    return jsonify({"success": True})
+
+
 @app.route("/api/brand/apply-analysis", methods=["POST"])
 def apply_analysis():
     """Write analysis JSON fields to an existing Notion Brand Profile page."""
@@ -262,12 +281,10 @@ def apply_analysis():
 
     try:
         properties = {}
-        # Select fields
         if analysis.get("tone_of_voice"):
             properties["Tone of Voice"] = {"select": {"name": analysis["tone_of_voice"][:100]}}
         if analysis.get("niche"):
             properties["Ниша"] = {"select": {"name": analysis["niche"][:100]}}
-        # Rich text fields
         rt_map = {
             "Основна аудитория": analysis.get("audience", ""),
             "Бранд послание": analysis.get("brand_message", ""),
