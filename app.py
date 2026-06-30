@@ -344,6 +344,9 @@ def get_campaign_detail(campaign_id):
             "copy": get_text(props.get("Copy", {})),
             "visual": get_text(props.get("Visual", {})),
             "qa_report": get_text(props.get("QA Report", {})),
+            "campaign_type": get_select(props.get("Campaign Type", {})) or get_text(props.get("Campaign Type", {})),
+            "campaign_notes": get_text(props.get("Campaign Notes", {})),
+            "channels": get_multi_select(props.get("Channels", {})) or get_multi_select(props.get("Канали", {})),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

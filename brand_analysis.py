@@ -138,7 +138,7 @@ def _step1_prose_analysis(raw_content, source_type):
 
 # Exact allowed values for select fields
 TONE_OPTIONS = ["Приятелски", "Вдъхновяващ", "Професионален", "Луксозен", "Семеен", "Динамичен"]
-NICHE_OPTIONS = ["Ресторант", "Ритейл", "Фитнес", "Футболна_Академия", "Дентална клиника", "Маркетинг агенция", "Хотел", "Недвижими имоти", "Друго"]
+NICHE_OPTIONS = ["Ресторант", "Ритейл", "Фитнес", "Футболна Академия", "Дентална клиника", "Маркетинг агенция", "Хотел", "Недвижими имоти", "Друго"]
 
 def _step2_extract_json(prose_analysis):
     """Step 2: Extract structured JSON from the prose analysis."""
