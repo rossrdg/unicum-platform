@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Съдържание за одобрение</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F7F6F3;
+  --white: #FFFFFF;
+  --gold: #C9A96E;
+  --gold-dark: #A07840;
+  --teal: #2A7A6F;
+  --teal-light: #E8F5F3;
+  --border: #E2DDD6;
+  --text: #1A1714;
+  --muted: #8A8278;
+  --danger: #C0392B;
+  --danger-bg: #FDF0EE;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.header-logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold); font-size: 14px; font-weight: 600;
+}
+.header-name { font-size: 15px; font-weight: 600; }
+.header-client { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.header-nav { display: flex; align-items: center; gap: 8px; }
+.week-nav-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--white);
+  cursor: pointer; font-size: 16px; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.week-nav-btn:hover { background: var(--bg); border-color: #C8C3BB; }
+.week-label { font-size: 13px; font-weight: 500; min-width: 160px; text-align: center; }
+.today-btn {
+  padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--white); font-size: 12px; cursor: pointer; font-weight: 500;
+  transition: all .15s;
+}
+.today-btn:hover { background: var(--bg); }
+
+/* MAIN */
+.main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+
+/* WEEK GRID */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.day-col { display: flex; flex-direction: column; gap: 8px; }
+.day-header {
+  text-align: center;
+  padding: 10px 4px;
+  border-radius: var(--radius);
+  background: var(--white);
+  border: 1px solid var(--border);
+}
+.day-name { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.day-num { font-size: 20px; font-weight: 600; margin-top: 2px; }
+.day-count { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.day-header.today { background: var(--text); border-color: var(--text); }
+.day-header.today .day-name,
+.day-header.today .day-num,
+.day-header.today .day-count { color: white; }
+.day-header.today .day-num { color: var(--gold); }
+
+/* POST CARD */
+.post-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+}
+.post-card:hover { border-color: var(--gold); box-shadow: 0 2px 12px rgba(0,0,0,.07); transform: translateY(-1px); }
+.post-card.status-approved { border-left: 3px solid var(--teal); }
+.post-card.status-fix { border-left: 3px solid var(--danger); }
+.post-card.status-pending { border-left: 3px solid var(--gold); }
+
+.card-channel {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; padding: 2px 7px;
+  border-radius: 4px; color: white; margin-bottom: 7px;
+}
+.ch-instagram { background: linear-gradient(135deg,#f58529,#dd2a7b,#8134af); }
+.ch-facebook { background: #1877F2; }
+.ch-email { background: #5D5FEF; }
+.ch-tiktok { background: #010101; }
+.ch-linkedin { background: #0A66C2; }
+
+.card-text {
+  font-size: 12px; line-height: 1.5; color: var(--text);
+  display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 500; margin-top: 8px;
+  padding: 2px 7px; border-radius: 4px;
+}
+.cs-pending { background: rgba(201,169,110,.12); color: var(--gold-dark); }
+.cs-approved { background: rgba(42,122,111,.12); color: var(--teal); }
+.cs-fix { background: rgba(192,57,43,.1); color: var(--danger); }
+
+/* EMPTY SLOT */
+.day-empty {
+  background: transparent; border: 1.5px dashed var(--border);
+  border-radius: var(--radius); padding: 16px 8px;
+  text-align: center; font-size: 11px; color: #C5BFB8;
+}
+
+/* STATS BAR */
+.stats-bar {
+  display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.stat {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 120px;
+}
+.stat-icon { font-size: 20px; }
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.stat-value { font-size: 22px; font-weight: 600; margin-top: 1px; }
+
+/* LOADING / ERROR */
+.state-screen {
+  text-align: center; padding: 80px 20px; color: var(--muted);
+}
+.state-screen .icon { font-size: 40px; margin-bottom: 12px; }
+.state-screen h2 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+.state-screen p { font-size: 13px; max-width: 360px; margin: 0 auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 36px; height: 36px; border: 3px solid var(--border);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 16px;
+}
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,15,12,.55); backdrop-filter: blur(4px);
+  z-index: 200; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white); border-radius: var(--radius-lg);
+  width: 100%; max-width: 520px; max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.18);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.modal-title { font-size: 17px; font-weight: 600; }
+.modal-channel { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 8px; background: var(--bg);
+  border: none; cursor: pointer; font-size: 18px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px 24px; }
+.modal-section { margin-bottom: 16px; }
+.modal-section-label {
+  font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px; font-weight: 500;
+}
+.modal-text {
+  font-size: 13px; line-height: 1.7; color: var(--text);
+  background: var(--bg); border-radius: 8px; padding: 12px 14px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.visual-box {
+  font-size: 12px; color: #6B60A8; line-height: 1.6;
+  font-style: italic; background: #F4F2FB;
+  border-radius: 8px; padding: 12px 14px;
+}
+.modal-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border);
+}
+.btn-row { display: flex; gap: 10px; }
+.btn {
+  flex: 1; padding: 12px; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: none; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-approve {
+  background: var(--teal); color: white;
+}
+.btn-approve:hover { background: #1F5E55; }
+.btn-fix {
+  background: var(--bg); color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.btn-fix:hover { border-color: var(--danger); color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.fix-form { display: none; margin-top: 14px; }
+.fix-form.show { display: block; }
+.fix-textarea {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-family: inherit; resize: vertical; min-height: 80px;
+  background: var(--white); color: var(--text); line-height: 1.5;
+}
+.fix-textarea:focus { outline: none; border-color: var(--gold); }
+.btn-send-fix {
+  width: 100%; margin-top: 10px; padding: 11px;
+  background: var(--danger); color: white; border: none;
+  border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-send-fix:hover { background: #A32922; }
+.btn-send-fix:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ALREADY ACTIONED STATES */
+.done-badge {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 13px; font-weight: 500; padding: 12px;
+  border-radius: 10px;
+}
+.done-approved { background: var(--teal-light); color: var(--teal); }
+.done-fix { background: var(--danger-bg); color: var(--danger); }
+
+/* TOAST */
+.toast {
+  display: none; position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--text); color: white;
+  padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
+  z-index: 300; white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+.toast.success { background: var(--teal); }
+.toast.error { background: var(--danger); }
+
+/* RESPONSIVE */
+@media (max-width: 700px) {
+  .week-grid { grid-template-columns: repeat(7,1fr); gap: 4px; }
+  .card-text { -webkit-line-clamp: 2; }
+  .main { padding: 12px; }
+  .header { padding: 12px 16px; }
+  .week-label { min-width: 120px; font-size: 12px; }
+  .stats-bar { gap: 8px; }
+  .stat { padding: 10px 12px; }
+  .stat-value { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">U</div>
+    <div>
+      <div class="header-name">Unicum Digital</div>
+      <div class="header-client" id="header-client">Зарежда...</div>
+    </div>
+  </div>
+  <div class="header-nav">
+    <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+    <div class="week-label" id="week-label">—</div>
+    <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+    <button class="today-btn" onclick="goToday()">Тази седмица</button>
+  </div>
+</header>
+
+<main class="main" id="main-content">
+  <div class="state-screen">
+    <div class="spinner"></div>
+    <p>Зарежда вашето съдържание...</p>
+  </div>
+</main>
+
+<!-- POST MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">—</div>
+        <div class="modal-channel" id="modal-channel">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const token = new URLSearchParams(window.location.search).get('token');
+const API_BASE = window.location.origin;
+
+let clientName = '';
+let allPosts = [];
+let currentWeekStart = getMonday(new Date());
+let currentPostId = null;
+let currentPostStatus = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getMonday(d) {
+  const day = new Date(d);
+  const dow = day.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  day.setDate(day.getDate() + diff);
+  day.setHours(0,0,0,0);
+  return day;
+}
+
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function fmtDate(d) {
+  return d.toISOString().slice(0,10);
+}
+
+function fmtDisplay(d) {
+  const months = ['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+const DAY_NAMES = ['Пон','Вт','Ср','Чет','Пет','Съб','Нед'];
+const CHANNEL_CLASS = {
+  'Instagram':'ch-instagram','Facebook':'ch-facebook','Email':'ch-email',
+  'TikTok':'ch-tiktok','LinkedIn':'ch-linkedin'
+};
+const CHANNEL_ICON = {
+  'Instagram':'📷','Facebook':'📘','Email':'✉️','TikTok':'🎵','LinkedIn':'💼'
+};
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+
+async function loadPosts() {
+  if (!token) {
+    showError('Невалиден линк', 'Моля, поискайте нов линк от вашата агенция.');
+    return;
+  }
+  try {
+    const resp = await fetch(`${API_BASE}/api/client/${token}/posts`);
+    if (resp.status === 403) {
+      showError('Достъпът е отказан', 'Токенът в линка е невалиден или изтекъл. Свържете се с вашата агенция.');
+      return;
+    }
+    if (!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    clientName = data.client_name || 'Клиент';
+    allPosts = data.posts || [];
+    document.getElementById('header-client').textContent = clientName;
+    document.title = `${clientName} — Съдържание за одобрение`;
+    renderPage();
+  } catch(e) {
+    showError('Грешка при зареждане', e.message);
+  }
+}
+
+function showError(title, msg) {
+  document.getElementById('main-content').innerHTML = `
+    <div class="state-screen">
+      <div class="icon">⚠️</div>
+      <h2>${title}</h2>
+      <p>${msg}</p>
+    </div>`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function changeWeek(delta) {
+  currentWeekStart = addDays(currentWeekStart, delta * 7);
+  renderPage();
+}
+
+function goToday() {
+  currentWeekStart = getMonday(new Date());
+  renderPage();
+}
+
+function renderPage() {
+  const weekEnd = addDays(currentWeekStart, 6);
+  const startFmt = fmtDisplay(currentWeekStart);
+  const endFmt = fmtDisplay(weekEnd);
+  const year = weekEnd.getFullYear();
+  document.getElementById('week-label').textContent = `${startFmt} – ${endFmt}, ${year}`;
+
+  // Build day buckets
+  const byDate = {};
+  allPosts.forEach(p => {
+    if (!p.date) return;
+    const key = p.date.slice(0,10);
+    (byDate[key] = byDate[key] || []).push(p);
+  });
+
+  const todayKey = fmtDate(new Date());
+
+  // Stats across entire dataset (not just this week)
+  const pending = allPosts.filter(p => p.status === 'Чака клиентско одобрение').length;
+  const approved = allPosts.filter(p => p.status === 'Одобрено').length;
+  const fixes = allPosts.filter(p => p.status === 'Иска корекция').length;
+
+  const statsHtml = `
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-icon">⏳</div>
+        <div><div class="stat-label">Чакат одобрение</div><div class="stat-value">${pending}</div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon">✅</div>
+        <div><div class="stat-label">Одобрени</div><div class="stat-value">${approved}</div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon">✏️</div>
+        <div><div class="stat-label">За корекция</div><div class="stat-value">${fixes}</div></div>
+      </div>
+    </div>`;
+
+  // Week grid
+  let gridHtml = '<div class="week-grid">';
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(currentWeekStart, i);
+    const key = fmtDate(day);
+    const isToday = key === todayKey;
+    const dayPosts = byDate[key] || [];
+
+    gridHtml += `<div class="day-col">
+      <div class="day-header ${isToday ? 'today' : ''}">
+        <div class="day-name">${DAY_NAMES[i]}</div>
+        <div class="day-num">${day.getDate()}</div>
+        <div class="day-count">${dayPosts.length ? dayPosts.length + ' поста' : '—'}</div>
+      </div>`;
+
+    if (dayPosts.length) {
+      dayPosts.forEach(p => {
+        const chClass = CHANNEL_CLASS[p.channel] || 'ch-facebook';
+        const chIcon = CHANNEL_ICON[p.channel] || '🔗';
+        const statusClass = p.status === 'Одобрено' ? 'status-approved'
+          : p.status === 'Иска корекция' ? 'status-fix' : 'status-pending';
+        const statusLabel = p.status === 'Одобрено' ? '✓ Одобрено'
+          : p.status === 'Иска корекция' ? '✏ Чака корекция' : '⏳ Чака одобрение';
+        const statusBadgeClass = p.status === 'Одобрено' ? 'cs-approved'
+          : p.status === 'Иска корекция' ? 'cs-fix' : 'cs-pending';
+
+        gridHtml += `<div class="post-card ${statusClass}" onclick="openPost('${p.id}')">
+          <div class="card-channel ${chClass}">${chIcon} ${p.channel}</div>
+          <div class="card-text">${(p.final_text || '').replace(/</g,'&lt;')}</div>
+          <div class="card-status ${statusBadgeClass}">${statusLabel}</div>
+        </div>`;
+      });
+    } else {
+      gridHtml += `<div class="day-empty">Няма постове</div>`;
+    }
+
+    gridHtml += '</div>';
+  }
+  gridHtml += '</div>';
+
+  // Empty state if no posts at all
+  const emptyHtml = allPosts.length === 0 ? `
+    <div class="state-screen">
+      <div class="icon">📭</div>
+      <h2>Все още няма съдържание</h2>
+      <p>Когато вашата агенция подготви постовете за одобрение, те ще се появят тук.</p>
+    </div>` : '';
+
+  document.getElementById('main-content').innerHTML = statsHtml + gridHtml + emptyHtml;
+}
+
+// ── Post Modal ────────────────────────────────────────────────────────────────
+
+function openPost(id) {
+  const p = allPosts.find(x => x.id === id);
+  if (!p) return;
+  currentPostId = id;
+  currentPostStatus = p.status;
+
+  const chIcon = CHANNEL_ICON[p.channel] || '🔗';
+  document.getElementById('modal-title').textContent = `${p.date ? p.date.slice(0,10) : ''}`;
+  document.getElementById('modal-channel').textContent = `${chIcon} ${p.channel || '—'}  ·  ${clientName}`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-section">
+      <div class="modal-section-label">Текст за публикуване</div>
+      <div class="modal-text">${(p.final_text || '—').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+    </div>
+    ${p.visual_prompt ? `
+    <div class="modal-section">
+      <div class="modal-section-label">Визия (описание за изображение)</div>
+      <div class="visual-box">${p.visual_prompt.replace(/</g,'&lt;')}</div>
+    </div>` : ''}`;
+
+  const footer = document.getElementById('modal-footer');
+
+  if (p.status === 'Одобрено') {
+    footer.innerHTML = `<div class="done-badge done-approved">✓ Вие одобрихте тази публикация</div>`;
+  } else if (p.status === 'Иска корекция') {
+    footer.innerHTML = `
+      <div class="done-badge done-fix">✏ Изпратихте заявка за корекция</div>
+      ${p.client_comment ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">Вашият коментар: <em>${p.client_comment}</em></div>` : ''}`;
+  } else {
+    footer.innerHTML = `
+      <div class="btn-row">
+        <button class="btn btn-fix" id="btn-fix" onclick="toggleFixForm()">✏ Искам корекция</button>
+        <button class="btn btn-approve" id="btn-approve" onclick="approvePost()">✓ Одобрявам</button>
+      </div>
+      <div class="fix-form" id="fix-form">
+        <textarea class="fix-textarea" id="fix-comment" placeholder="Опишете какво искате да се промени..."></textarea>
+        <button class="btn-send-fix" onclick="submitFix()">Изпрати заявка за корекция</button>
+      </div>`;
+  }
+
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentPostId = null;
+}
+
+function toggleFixForm() {
+  const form = document.getElementById('fix-form');
+  form.classList.toggle('show');
+  if (form.classList.contains('show')) {
+    document.getElementById('fix-comment').focus();
+  }
+}
+
+async function approvePost() {
+  if (!currentPostId) return;
+  const btn = document.getElementById('btn-approve');
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const resp = await fetch(`${API_BASE}/api/client/${token}/posts/${currentPostId}/approve`, {method:'POST'});
+    if (!resp.ok) throw new Error(await resp.text());
+    const p = allPosts.find(x => x.id === currentPostId);
+    if (p) p.status = 'Одобрено';
+    closeModal();
+    showToast('✓ Публикацията е одобрена', 'success');
+    renderPage();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '✓ Одобрявам';
+  }
+}
+
+async function submitFix() {
+  if (!currentPostId) return;
+  const comment = document.getElementById('fix-comment').value.trim();
+  if (!comment) { document.getElementById('fix-comment').focus(); return; }
+  const btn = document.querySelector('.btn-send-fix');
+  btn.disabled = true; btn.textContent = 'Изпраща...';
+  try {
+    const resp = await fetch(`${API_BASE}/api/client/${token}/posts/${currentPostId}/request-fix`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({comment})
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const p = allPosts.find(x => x.id === currentPostId);
+    if (p) { p.status = 'Иска корекция'; p.client_comment = comment; }
+    closeModal();
+    showToast('✏ Заявката е изпратена', 'success');
+    renderPage();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Изпрати заявка за корекция';
+  }
+}
+
+loadPosts();
+</script>
+</body>
+</html>

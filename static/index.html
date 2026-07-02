@@ -147,6 +147,48 @@
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 .pulse{animation:pulse 1.5s ease infinite}
 
+/* CALENDAR */
+.cal-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.cal-nav{display:flex;align-items:center;gap:10px}
+.cal-nav-btn{width:30px;height:30px;border-radius:6px;border:0.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+.cal-nav-btn:hover{background:rgba(255,255,255,0.06)}
+.cal-month-label{font-size:14px;font-weight:500;min-width:140px;text-align:center}
+.cal-actions{display:flex;align-items:center;gap:8px}
+.cal-select{background:#0D1117;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-weekday{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;padding-bottom:4px}
+.cal-day{background:#161B22;border:0.5px solid var(--border);border-radius:8px;padding:6px;min-height:108px;display:flex;flex-direction:column;gap:4px}
+.cal-day.other-month{opacity:.35}
+.cal-day.today{border-color:rgba(201,169,110,0.5)}
+.cal-day-num{font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;padding:0 2px}
+.cal-day-num .today-badge{background:var(--gold);color:#0D1117;border-radius:4px;padding:0 4px;font-weight:600}
+.cal-post-card{background:#0D1117;border:0.5px solid var(--border);border-radius:6px;padding:5px 6px;cursor:pointer;display:flex;align-items:flex-start;gap:5px;transition:border-color .15s}
+.cal-post-card:hover{border-color:rgba(201,169,110,0.4)}
+.cal-post-checkbox{margin-top:2px;flex-shrink:0;cursor:pointer}
+.cal-post-info{flex:1;min-width:0}
+.cal-post-channel{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;color:white}
+.ch-instagram{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}
+.ch-facebook{background:#1877F2}
+.ch-email{background:#5D5FEF}
+.ch-tiktok{background:#000}
+.ch-linkedin{background:#0A66C2}
+.cal-post-title{font-size:11px;color:var(--text);margin-top:3px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cal-status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.sd-draft{background:var(--muted)}
+.sd-internal{background:#AFA9EC}
+.sd-client{background:var(--gold)}
+.sd-approved{background:#5DCAA5}
+.sd-fix{background:var(--danger)}
+.cal-bulkbar{display:none;align-items:center;justify-content:space-between;background:rgba(201,169,110,0.1);border:0.5px solid rgba(201,169,110,0.3);border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:12px;color:var(--gold-light)}
+.cal-bulkbar.show{display:flex}
+.cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:11px;color:var(--muted)}
+.cal-legend span{display:inline-flex;align-items:center;gap:5px}
+
+/* ADD-TO-CALENDAR MODAL ROWS */
+.atc-row{display:grid;grid-template-columns:90px 1fr 130px;gap:8px;align-items:start;padding:10px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.atc-row:last-child{border-bottom:none}
+.atc-row textarea{width:100%;background:#0D1117;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:7px 9px;color:var(--text);font-size:11px;font-family:inherit;resize:vertical;min-height:50px}
+
 /* BRAND ANALYSIS */
 .cc-analysis-btns{display:flex;gap:5px;margin-top:10px}
 .btn-analysis{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 8px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:0.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--muted);transition:all .15s}
@@ -220,6 +262,7 @@
       <div class="nav-item active" onclick="showSection('dashboard',this)"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Дашборд</div>
       <div class="nav-item" onclick="showSection('clients',this)"><i class="ti ti-users" aria-hidden="true"></i> Клиенти</div>
       <div class="nav-item" onclick="showSection('history',this)"><i class="ti ti-history" aria-hidden="true"></i> История</div>
+      <div class="nav-item" onclick="showSection('calendar',this)"><i class="ti ti-calendar" aria-hidden="true"></i> Календар</div>
       <div class="nav-label">Действия</div>
       <div class="nav-item" onclick="openLauncher()"><i class="ti ti-player-play" aria-hidden="true"></i> Нова кампания</div>
     </nav>
@@ -289,6 +332,44 @@
         <div class="history-table">
           <div class="ht-header"><div>Кампания</div><div>Клиент</div><div>QA Score</div><div>Дата</div><div>Действие</div></div>
           <div id="history-rows"><div class="loading-state"><i class="ti ti-loader spin" aria-hidden="true"></i><div>Зарежда история...</div></div></div>
+        </div>
+      </div>
+
+      <div class="section" id="sec-calendar">
+        <div class="cal-bulkbar" id="cal-bulkbar">
+          <span id="cal-bulk-count">0 избрани</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm" onclick="calClearSelection()">Изчисти</button>
+            <button class="btn btn-primary btn-sm" onclick="calBulkSendForApproval()">Изпрати избраните</button>
+          </div>
+        </div>
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calChangeMonth(-1)">‹</button>
+            <div class="cal-month-label" id="cal-month-label">—</div>
+            <button class="cal-nav-btn" onclick="calChangeMonth(1)">›</button>
+            <button class="btn btn-sm" onclick="calGoToday()">Днес</button>
+          </div>
+          <div class="cal-actions">
+            <select class="cal-select" id="cal-client-filter" onchange="renderCalendar()">
+              <option value="">Всички клиенти</option>
+            </select>
+            <button class="btn btn-sm" onclick="loadCalendarPosts()"><i class="ti ti-refresh" aria-hidden="true"></i> Обнови</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-weekdays">
+          <div class="cal-weekday">Пон</div><div class="cal-weekday">Вт</div><div class="cal-weekday">Ср</div>
+          <div class="cal-weekday">Чет</div><div class="cal-weekday">Пет</div><div class="cal-weekday">Съб</div><div class="cal-weekday">Нед</div>
+        </div>
+        <div class="cal-grid" id="cal-grid-body">
+          <div class="loading-state" style="grid-column:1/-1"><i class="ti ti-loader spin" aria-hidden="true"></i><div>Зарежда календара...</div></div>
+        </div>
+        <div class="cal-legend">
+          <span><span class="cal-status-dot sd-draft"></span> Чернова</span>
+          <span><span class="cal-status-dot sd-internal"></span> Чака вътрешен преглед</span>
+          <span><span class="cal-status-dot sd-client"></span> Чака клиентско одобрение</span>
+          <span><span class="cal-status-dot sd-approved"></span> Одобрено</span>
+          <span><span class="cal-status-dot sd-fix"></span> Иска корекция</span>
         </div>
       </div>
     </div>
@@ -602,6 +683,7 @@
           <div class="drawer-actions">
             <button class="btn btn-sm" id="detail-approve-btn" onclick="approveFromDetail()" style="display:none">✓ Одобри кампанията</button>
             <button class="btn btn-sm" style="opacity:.5;cursor:default" id="detail-approved-badge" style="display:none">✓ Одобрена</button>
+            <button class="btn btn-sm" onclick="openAddToCalendar()">📅 Добави в календара</button>
           </div>
         </div>
         <button class="drawer-close" onclick="closeDetail()">×</button>
@@ -614,6 +696,43 @@
         <div class="drawer-tab" onclick="switchDrawerTab('campaign',this)">Кампания</div>
       </div>
       <div class="drawer-body" id="detail-body">
+        <div class="drawer-loading">Зарежда...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD TO CALENDAR MODAL -->
+  <div class="overlay" id="atc-overlay">
+    <div class="modal" style="width:620px">
+      <div class="modal-header">
+        <div><div class="modal-title">Добави в календара</div><div class="modal-sub">Избери канали и дати за публикуване — създава отделни записи в Calendar Posts</div></div>
+        <button class="modal-close" onclick="closeAddToCalendar()">×</button>
+      </div>
+      <div class="modal-body" id="atc-body">
+        <div class="loading-state">Зарежда копито от кампанията...</div>
+      </div>
+      <div class="modal-footer" style="padding:14px 20px;border-top:0.5px solid var(--border)">
+        <button class="btn btn-sm" onclick="closeAddToCalendar()">Отказ</button>
+        <button class="btn btn-primary btn-sm" id="atc-save-btn" onclick="saveCalendarPosts()">Добави избраните</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR POST DETAIL DRAWER -->
+  <div class="drawer-overlay" id="calpost-overlay" onclick="if(event.target===this)closeCalPost()">
+    <div class="drawer" id="calpost-drawer">
+      <div class="drawer-header">
+        <div style="flex:1;min-width:0">
+          <div class="drawer-title" id="calpost-title">—</div>
+          <div class="drawer-meta" id="calpost-meta">—</div>
+          <div class="drawer-actions">
+            <button class="btn btn-sm" id="calpost-send-btn" onclick="calPostSendForApproval()">Изпрати за одобрение</button>
+            <button class="btn btn-sm" onclick="calPostSave()">Запази</button>
+          </div>
+        </div>
+        <button class="drawer-close" onclick="closeCalPost()">×</button>
+      </div>
+      <div class="drawer-body" id="calpost-body">
         <div class="drawer-loading">Зарежда...</div>
       </div>
     </div>
@@ -634,8 +753,8 @@ function showSection(id, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('sec-' + id).classList.add('active');
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Дашборд',clients:'Brand Profiles',history:'Campaign History'};
-  const subs = {dashboard:'Преглед на активни кампании',clients:'Управление на клиенти',history:'История на генерираните кампании'};
+  const titles = {dashboard:'Дашборд',clients:'Brand Profiles',history:'Campaign History',calendar:'Календар'};
+  const subs = {dashboard:'Преглед на активни кампании',clients:'Управление на клиенти',history:'История на генерираните кампании',calendar:'Месечен преглед на постовете'};
   document.getElementById('topbar-title').textContent = titles[id] || id;
   document.getElementById('topbar-sub').textContent = subs[id] || '';
   if (id === 'clients') {
@@ -647,6 +766,11 @@ function showSection(id, el) {
     else renderHistory(allHistory);
   }
   if (id === 'dashboard') loadDashboard();
+  if (id === 'calendar') {
+    if (allClients.length === 0) loadClients().then(() => calPopulateClientFilter());
+    else calPopulateClientFilter();
+    loadCalendarPosts();
+  }
 }
 
 function showToast(msg, isError) {
@@ -704,11 +828,15 @@ function renderClients(clients) {
       <div class="cc-meta">
         <div class="cc-meta-item">Тон: <span>${c.tone || '—'}</span></div>
       </div>
-      <div style="margin-top:10px" onclick="event.stopPropagation()">
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px" onclick="event.stopPropagation()">
         <button class="btn-analysis web" style="width:100%;justify-content:center"
           onclick="openEditClient('${c.id}')">
           ✎ Редактирай профила
         </button>
+        ${c.token ? `<button class="btn btn-sm" style="width:100%;justify-content:center;font-size:11px"
+          onclick="copyClientLink('${c.token}', this)">
+          🔗 Копирай клиентски линк
+        </button>` : `<span style="font-size:10px;color:var(--muted);text-align:center;display:block">Няма Token в Notion</span>`}
       </div>
     </div>`).join('') +
     `<div class="client-card add-new" onclick="openAddClient()">
@@ -1182,6 +1310,7 @@ async function openDetail(id) {
     document.getElementById('detail-drawer').dataset.channels = JSON.stringify(data.channels || []);
     document.getElementById('detail-drawer').dataset.date = data.date || '';
     document.getElementById('detail-drawer').dataset.client = data.client || '';
+    document.getElementById('detail-drawer').dataset.clientId = data.client_id || '';
 
     renderDrawerTab('strategy');
   } catch(e) {
@@ -1286,8 +1415,28 @@ function renderDrawerTab(tab) {
     const rec = q.recommendation || '—';
     const recColor = rec.includes('approve') ? '#5DCAA5' : rec.includes('reject') ? 'var(--danger)' : 'var(--gold)';
 
-    // Issues: handle both string[] and {description}[] formats
-    const issueText = i => typeof i === 'object' ? (i.description || i.message || JSON.stringify(i)) : i;
+    // Issues: handle plain strings, {description}, or structured {severity, location, issue, fix}
+    const sevColor = sev => sev === 'high' ? 'var(--danger)' : sev === 'medium' ? 'var(--gold)' : 'var(--muted)';
+    const sevLabel = sev => sev === 'high' ? 'Висок' : sev === 'medium' ? 'Среден' : sev === 'low' ? 'Нисък' : '';
+    const renderIssue = i => {
+      // Some pipelines double-encode: issue item arrives as a JSON-looking string
+      if (typeof i === 'string' && i.trim().startsWith('{')) {
+        try { i = JSON.parse(i); } catch(e) {}
+      }
+      if (typeof i !== 'object') return `<div class="qa-row"><span class="qa-icon qa-warn">⚠</span><div style="font-size:12px;color:var(--muted)">${i}</div></div>`;
+      if (i.issue || i.location || i.fix) {
+        return `<div class="qa-row" style="flex-direction:column;align-items:stretch;gap:4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="qa-icon qa-warn">⚠</span>
+            ${i.severity ? `<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,0.06);color:${sevColor(i.severity)}">${sevLabel(i.severity)}</span>` : ''}
+            ${i.location ? `<span style="font-size:10px;color:var(--muted)">${i.location}</span>` : ''}
+          </div>
+          <div style="font-size:12px;color:var(--text);padding-left:22px">${i.issue || i.description || ''}</div>
+          ${i.fix ? `<div style="font-size:11px;color:#5DCAA5;padding-left:22px">→ ${i.fix}</div>` : ''}
+        </div>`;
+      }
+      return `<div class="qa-row"><span class="qa-icon qa-warn">⚠</span><div style="font-size:12px;color:var(--muted)">${i.description || i.message || ''}</div></div>`;
+    };
     // Fixes: suggested_fixes[] or suggested_improvements string
     const fixes = q.suggested_fixes || (q.suggested_improvements ? [q.suggested_improvements] : []);
 
@@ -1311,7 +1460,7 @@ function renderDrawerTab(tab) {
       ${q.issues && q.issues.length ? `
       <div class="content-block">
         <div class="content-block-label">Проблеми</div>
-        ${q.issues.map(i => `<div class="qa-row"><span class="qa-icon qa-warn">⚠</span><div style="font-size:12px;color:var(--muted)">${issueText(i)}</div></div>`).join('')}
+        ${q.issues.map(renderIssue).join('')}
       </div>` : ''}
       ${fixes.length ? `
       <div class="content-block">
@@ -1364,6 +1513,17 @@ function copyText(btn, encoded) {
     const orig = btn.textContent;
     btn.textContent = '✓';
     setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function copyClientLink(token, btn) {
+  const base = window.location.origin;
+  const url = `${base}/client_calendar.html?token=${token}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Копирано!';
+    btn.style.color = '#5DCAA5';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
   });
 }
 
@@ -1649,6 +1809,330 @@ function renderClientCampaigns(clientName) {
           <span>${h.date?h.date.slice(0,10):'—'}</span>
         </div>
       </div>`).join('')}`;
+}
+
+// ── ADMIN CALENDAR ──────────────────────────────────────────────────────────
+
+let allCalendarPosts = [];
+let calCurrentDate = new Date();
+let calSelectedIds = new Set();
+
+const CHANNEL_CLASS = {
+  'Instagram': 'ch-instagram', 'Facebook': 'ch-facebook', 'Email': 'ch-email',
+  'TikTok': 'ch-tiktok', 'LinkedIn': 'ch-linkedin'
+};
+const CHANNEL_ICON = {
+  'Instagram': '📷', 'Facebook': '📘', 'Email': '✉️', 'TikTok': '🎵', 'LinkedIn': '💼'
+};
+const STATUS_DOT_CLASS = {
+  'Чернова': 'sd-draft',
+  'Чака вътрешен преглед': 'sd-internal',
+  'Чака клиентско одобрение': 'sd-client',
+  'Одобрено': 'sd-approved',
+  'Иска корекция': 'sd-fix'
+};
+
+function calPopulateClientFilter() {
+  const sel = document.getElementById('cal-client-filter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Всички клиенти</option>' +
+    allClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  sel.value = prev;
+}
+
+async function loadCalendarPosts() {
+  const grid = document.getElementById('cal-grid-body');
+  grid.innerHTML = '<div class="loading-state" style="grid-column:1/-1"><i class="ti ti-loader spin" aria-hidden="true"></i><div>Зарежда календара...</div></div>';
+  try {
+    const resp = await fetch(`${API}/calendar-posts`);
+    if (!resp.ok) throw new Error(await resp.text());
+    allCalendarPosts = await resp.json();
+    renderCalendar();
+  } catch(e) {
+    grid.innerHTML = `<div class="loading-state">Грешка: ${e.message}</div>`;
+  }
+}
+
+function calChangeMonth(delta) {
+  calCurrentDate.setMonth(calCurrentDate.getMonth() + delta);
+  renderCalendar();
+}
+
+function calGoToday() {
+  calCurrentDate = new Date();
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('cal-grid-body');
+  const year = calCurrentDate.getFullYear();
+  const month = calCurrentDate.getMonth();
+  const monthNames = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+  document.getElementById('cal-month-label').textContent = `${monthNames[month]} ${year}`;
+
+  const clientFilter = document.getElementById('cal-client-filter').value;
+  let posts = allCalendarPosts;
+  if (clientFilter) posts = posts.filter(p => p.client_id === clientFilter);
+
+  // Group posts by YYYY-MM-DD
+  const byDate = {};
+  posts.forEach(p => {
+    if (!p.date) return;
+    const key = p.date.slice(0,10);
+    (byDate[key] = byDate[key] || []).push(p);
+  });
+
+  // Monday-first grid: figure out first day to display
+  const firstOfMonth = new Date(year, month, 1);
+  const startOffset = (firstOfMonth.getDay() + 6) % 7; // 0=Mon
+  const startDate = new Date(year, month, 1 - startOffset);
+  const todayKey = new Date().toISOString().slice(0,10);
+
+  let html = '';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    const key = d.toISOString().slice(0,10);
+    const isOtherMonth = d.getMonth() !== month;
+    const isToday = key === todayKey;
+    const dayPosts = byDate[key] || [];
+
+    html += `<div class="cal-day ${isOtherMonth?'other-month':''} ${isToday?'today':''}">
+      <div class="cal-day-num"><span>${d.getDate()}</span>${isToday?'<span class="today-badge">Днес</span>':''}</div>
+      ${dayPosts.map(p => calRenderPostCard(p)).join('')}
+    </div>`;
+  }
+  grid.innerHTML = html;
+  calUpdateBulkbar();
+}
+
+function calRenderPostCard(p) {
+  const chClass = CHANNEL_CLASS[p.channel] || 'ch-facebook';
+  const chIcon = CHANNEL_ICON[p.channel] || '🔗';
+  const dotClass = STATUS_DOT_CLASS[p.status] || 'sd-draft';
+  const checked = calSelectedIds.has(p.id) ? 'checked' : '';
+  const title = (p.title || p.final_text || 'Без текст').slice(0, 60);
+  return `<div class="cal-post-card" onclick="openCalPost('${p.id}')">
+    <input type="checkbox" class="cal-post-checkbox" ${checked} onclick="event.stopPropagation();calToggleSelect('${p.id}',this)">
+    <div class="cal-post-info">
+      <span class="cal-post-channel ${chClass}">${chIcon} ${p.channel || '—'}</span>
+      <div class="cal-post-title">${title}</div>
+    </div>
+    <span class="cal-status-dot ${dotClass}" title="${p.status}"></span>
+  </div>`;
+}
+
+function calToggleSelect(id, checkbox) {
+  if (checkbox.checked) calSelectedIds.add(id);
+  else calSelectedIds.delete(id);
+  calUpdateBulkbar();
+}
+
+function calClearSelection() {
+  calSelectedIds.clear();
+  renderCalendar();
+}
+
+function calUpdateBulkbar() {
+  const bar = document.getElementById('cal-bulkbar');
+  const count = calSelectedIds.size;
+  document.getElementById('cal-bulk-count').textContent = `${count} избрани`;
+  bar.classList.toggle('show', count > 0);
+}
+
+async function calBulkSendForApproval() {
+  const ids = [...calSelectedIds];
+  if (!ids.length) return;
+  try {
+    const resp = await fetch(`${API}/calendar-posts/send-for-approval`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ids})
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast(`Изпратени ${ids.length} поста за клиентско одобрение`);
+    calSelectedIds.clear();
+    await loadCalendarPosts();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, true);
+  }
+}
+
+// ── CALENDAR POST DETAIL DRAWER ──────────────────────────────────────────────
+
+let currentCalPostId = null;
+
+async function openCalPost(id) {
+  currentCalPostId = id;
+  document.getElementById('calpost-overlay').classList.add('open');
+  document.getElementById('calpost-body').innerHTML = '<div class="drawer-loading">Зарежда...</div>';
+  try {
+    const resp = await fetch(`${API}/calendar-posts/${id}`);
+    if (!resp.ok) throw new Error(await resp.text());
+    const p = await resp.json();
+    document.getElementById('calpost-title').textContent = p.title || 'Пост';
+    document.getElementById('calpost-meta').textContent = `${p.client || '—'} · ${p.date ? p.date.slice(0,10) : 'без дата'} · ${p.status || '—'}`;
+    const sendBtn = document.getElementById('calpost-send-btn');
+    sendBtn.style.display = (p.status === 'Чернова' || p.status === 'Чака вътрешен преглед') ? '' : 'none';
+
+    document.getElementById('calpost-body').innerHTML = `
+      <div class="content-block">
+        <div class="content-block-label">Канал</div>
+        <select class="form-select" id="cp-channel">
+          ${['Instagram','Facebook','Email','TikTok','LinkedIn'].map(ch =>
+            `<option value="${ch}" ${p.channel===ch?'selected':''}>${ch}</option>`).join('')}
+        </select>
+      </div>
+      <div class="content-block">
+        <div class="content-block-label">Дата на публикуване</div>
+        <input class="form-input" type="date" id="cp-date" value="${p.date ? p.date.slice(0,10) : ''}">
+      </div>
+      <div class="content-block">
+        <div class="content-block-label">Финален текст</div>
+        <textarea class="form-input" id="cp-text" rows="6" style="resize:vertical">${p.final_text || ''}</textarea>
+      </div>
+      <div class="content-block">
+        <div class="content-block-label">Visual Prompt</div>
+        <textarea class="form-input" id="cp-visual" rows="3" style="resize:vertical">${p.visual_prompt || ''}</textarea>
+      </div>
+      <div class="content-block">
+        <div class="content-block-label">Статус</div>
+        <select class="form-select" id="cp-status">
+          ${Object.keys(STATUS_DOT_CLASS).map(s =>
+            `<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      ${p.client_comment ? `
+      <div class="content-block" style="border-color:rgba(192,57,43,0.4)">
+        <div class="content-block-label" style="color:var(--danger)">Клиентски коментар</div>
+        <div class="content-block-text">${p.client_comment}</div>
+      </div>` : ''}`;
+  } catch(e) {
+    document.getElementById('calpost-body').innerHTML = `<div class="drawer-loading">Грешка: ${e.message}</div>`;
+  }
+}
+
+function closeCalPost() {
+  document.getElementById('calpost-overlay').classList.remove('open');
+  currentCalPostId = null;
+}
+
+async function calPostSave() {
+  if (!currentCalPostId) return;
+  const payload = {
+    channel: document.getElementById('cp-channel').value,
+    date: document.getElementById('cp-date').value,
+    final_text: document.getElementById('cp-text').value,
+    visual_prompt: document.getElementById('cp-visual').value,
+    status: document.getElementById('cp-status').value,
+  };
+  try {
+    const resp = await fetch(`${API}/calendar-posts/${currentCalPostId}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('Запазено');
+    closeCalPost();
+    loadCalendarPosts();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, true);
+  }
+}
+
+async function calPostSendForApproval() {
+  if (!currentCalPostId) return;
+  try {
+    const resp = await fetch(`${API}/calendar-posts/${currentCalPostId}/send-for-approval`, {method:'POST'});
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('Изпратен за клиентско одобрение');
+    closeCalPost();
+    loadCalendarPosts();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, true);
+  }
+}
+
+// ── ADD TO CALENDAR (from Campaign Drawer) ──────────────────────────────────
+
+let atcCampaignId = null;
+let atcClientId = null;
+
+function openAddToCalendar() {
+  if (!currentDetailId) return;
+  atcCampaignId = currentDetailId;
+  const drawer = document.getElementById('detail-drawer');
+  atcClientId = drawer.dataset.clientId || '';
+  document.getElementById('atc-overlay').classList.add('open');
+
+  let copy = {};
+  try { copy = JSON.parse(drawer.dataset.copy || '{}'); } catch(e) {}
+  let visual = {};
+  try { visual = JSON.parse(drawer.dataset.visual || '{}'); } catch(e) {}
+
+  if (!atcClientId) {
+    document.getElementById('atc-body').innerHTML = '<div class="loading-state">Липсва client_id за тази кампания — провери дали /api/campaigns/&lt;id&gt; връща client_id.</div>';
+    return;
+  }
+
+  const rows = [
+    { channel: 'Instagram', text: copy.instagram_caption || '' },
+    { channel: 'Facebook', text: copy.facebook_post || '' },
+  ].filter(r => r.text);
+
+  if (!rows.length) {
+    document.getElementById('atc-body').innerHTML = '<div class="loading-state">Няма генериран копирайтинг за тази кампания още.</div>';
+    return;
+  }
+
+  document.getElementById('atc-body').innerHTML = rows.map((r, i) => `
+    <div class="atc-row">
+      <div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" class="atc-include" data-channel="${r.channel}" checked> ${r.channel}
+        </label>
+      </div>
+      <textarea class="atc-text" data-channel="${r.channel}">${r.text}</textarea>
+      <input class="form-input atc-date" type="date" data-channel="${r.channel}">
+    </div>`).join('') +
+    `<input type="hidden" id="atc-visual-prompt" value="${encodeURIComponent(visual.midjourney_prompt || '')}">`;
+}
+
+function closeAddToCalendar() {
+  document.getElementById('atc-overlay').classList.remove('open');
+  atcCampaignId = null;
+  atcClientId = null;
+}
+
+async function saveCalendarPosts() {
+  const rows = [...document.querySelectorAll('.atc-row')];
+  const posts = [];
+  rows.forEach(row => {
+    const include = row.querySelector('.atc-include');
+    if (!include.checked) return;
+    const channel = include.dataset.channel;
+    const text = row.querySelector('.atc-text').value;
+    const date = row.querySelector('.atc-date').value;
+    if (!date) return;
+    posts.push({ channel, date, final_text: text,
+      visual_prompt: decodeURIComponent(document.getElementById('atc-visual-prompt').value || '') });
+  });
+  if (!posts.length) { showToast('Избери поне един канал и дата', true); return; }
+
+  const btn = document.getElementById('atc-save-btn');
+  btn.disabled = true; btn.textContent = 'Записва...';
+  try {
+    const resp = await fetch(`${API}/calendar-posts`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ client_id: atcClientId, campaign_id: atcCampaignId, posts })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast(`Добавени ${posts.length} поста в календара`);
+    closeAddToCalendar();
+  } catch(e) {
+    showToast('Грешка: ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Добави избраните';
+  }
 }
 
 </script>
