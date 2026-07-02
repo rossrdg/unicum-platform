@@ -14,6 +14,7 @@ notion = Client(auth=os.getenv("NOTION_TOKEN"))
 MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL")
 NOTION_DB_BRAND = os.getenv("NOTION_DB_BRAND")
 NOTION_DB_HISTORY = os.getenv("NOTION_DB_HISTORY")
+NOTION_DB_CALENDAR = os.getenv("NOTION_DB_CALENDAR")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,6 +63,25 @@ def get_multi_select(prop):
     except Exception:
         return []
 
+# Cyrillic lookalike chars (А В Е К М Н О Р С Т Х) map to their Latin equivalents.
+# Notion property names typed on a BG keyboard may contain these instead of Latin chars.
+_CYR_TO_LAT = str.maketrans(
+    'АВЕКМНОРСТХавекмнорстх',
+    'ABEKMHOPCTXabekmnopctx'
+)
+
+def _vis_lower(s):
+    """Visual-normalize: replace Cyrillic lookalikes → Latin, then lowercase."""
+    return s.translate(_CYR_TO_LAT).lower()
+
+def find_prop(props, name):
+    """Case-insensitive property lookup that handles Cyrillic/Latin lookalike keys."""
+    target = _vis_lower(name)
+    for key, val in props.items():
+        if _vis_lower(key) == target:
+            return val
+    return {}
+
 def get_relation_name(prop):
     try:
         relations = prop.get("relation", [])
@@ -75,6 +95,14 @@ def get_relation_name(prop):
     except Exception:
         return ""
 
+def get_relation_id(prop):
+    """Return the first related page id from a relation property, or ''."""
+    try:
+        relations = prop.get("relation", [])
+        return relations[0]["id"] if relations else ""
+    except Exception:
+        return ""
+
 def truncate(text, limit=1900):
     """Truncate to Notion's 2000-char rich_text limit with safety margin."""
     return text[:limit] if text else ""
@@ -85,6 +113,11 @@ def truncate(text, limit=1900):
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
+
+
+@app.route("/client_calendar.html")
+def client_calendar():
+    return send_from_directory("static", "client_calendar.html")
 
 
 @app.route("/api/clients", methods=["GET"])
@@ -110,12 +143,13 @@ def get_clients():
                     "channels": get_multi_select(props.get("Активни канали", {})),
                     "website_url": get_url(props.get("Website URL", {})),
                     "fb_page": get_text(props.get("Facebook Page", {})),
+                    "token": get_text(find_prop(props, "Token")),
                 })
             except Exception as page_err:
                 clients.append({"id": page.get("id","?"), "name": "ERROR: " + str(page_err),
                                  "niche":"","tone":"","status":"","audience":"","message":"",
                                  "forbidden":"","competitors":"","color_palette":"",
-                                 "sample_tone":"","website_url":"","fb_page":""})
+                                 "sample_tone":"","website_url":"","fb_page":"","token":"","channels":[]})
         return jsonify(clients)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -178,6 +212,7 @@ def get_client_detail(client_id):
             "sample_tone": get_text(props.get("Примерни добри текстове", {})),
             "website_url": get_url(props.get("Website URL", {})),
             "fb_page": get_text(props.get("Facebook Page", {})),
+            "token": get_text(find_prop(props, "Token")),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -337,6 +372,7 @@ def get_campaign_detail(campaign_id):
             "id": page["id"],
             "title": get_title(props.get("Campaign Title", {})),
             "client": get_relation_name(props.get("Клиент", {})),
+            "client_id": get_relation_id(props.get("Клиент", {})),
             "qa_score": get_number(props.get("QA Score", {})),
             "status": get_select(props.get("Статус", {})),
             "date": get_date(props.get("Дата на генериране", {})),
@@ -370,6 +406,235 @@ def launch_campaign():
     try:
         resp = req_lib.post(MAKE_WEBHOOK_URL, json=data, timeout=10)
         return jsonify({"success": True, "status": resp.status_code})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Calendar Posts ───────────────────────────────────────────────────────────
+
+def _serialize_calendar_post(page):
+    props = page.get("properties", {})
+    return {
+        "id": page["id"],
+        "title": get_title(props.get("Post Title", {})),
+        "client": get_relation_name(props.get("Клиент", {})),
+        "client_id": get_relation_id(props.get("Клиент", {})),
+        "campaign_id": get_relation_id(props.get("Кампания", {})),
+        "channel": get_select(props.get("Канал", {})),
+        "date": get_date(props.get("Дата на публикуване", {})),
+        "final_text": get_text(props.get("Финален текст", {})),
+        "visual_prompt": get_text(props.get("Visual Prompt", {})),
+        "status": get_select(props.get("Статус", {})),
+        "client_comment": get_text(props.get("Клиентски коментар", {})),
+    }
+
+
+@app.route("/api/calendar-posts", methods=["GET"])
+def get_calendar_posts():
+    """List all calendar posts. Optional filters: ?month=YYYY-MM&client_id=..."""
+    try:
+        results = notion.databases.query(database_id=NOTION_DB_CALENDAR).get("results", [])
+        posts = [_serialize_calendar_post(p) for p in results]
+
+        month = request.args.get("month")
+        if month:
+            posts = [p for p in posts if p["date"] and p["date"].startswith(month)]
+
+        client_id = request.args.get("client_id")
+        if client_id:
+            posts = [p for p in posts if p["client_id"] == client_id]
+
+        return jsonify(posts)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar-posts", methods=["POST"])
+def create_calendar_posts():
+    """
+    Create one or more Calendar Posts from a Campaign (the 'Добави в календара' button).
+    Payload: {
+      client_id, campaign_id,
+      posts: [ {channel, date, final_text, visual_prompt, title?}, ... ]
+    }
+    """
+    data = request.json or {}
+    client_id = data.get("client_id")
+    campaign_id = data.get("campaign_id")
+    posts = data.get("posts", [])
+    if not client_id or not posts:
+        return jsonify({"error": "client_id и posts са задължителни"}), 400
+
+    created = []
+    try:
+        for p in posts:
+            channel = p.get("channel", "")
+            date_str = p.get("date", "")
+            post_title = p.get("title") or f"{channel} — {date_str}".strip(" —")
+
+            properties = {
+                "Post Title": {"title": [{"text": {"content": post_title[:200]}}]},
+                "Клиент": {"relation": [{"id": client_id}]},
+                "Статус": {"select": {"name": "Чернова"}},
+            }
+            if campaign_id:
+                properties["Кампания"] = {"relation": [{"id": campaign_id}]}
+            if channel:
+                properties["Канал"] = {"select": {"name": channel}}
+            if date_str:
+                properties["Дата на публикуване"] = {"date": {"start": date_str}}
+            if p.get("final_text"):
+                properties["Финален текст"] = {"rich_text": [{"text": {"content": truncate(p["final_text"])}}]}
+            if p.get("visual_prompt"):
+                properties["Visual Prompt"] = {"rich_text": [{"text": {"content": truncate(p["visual_prompt"])}}]}
+
+            new_page = notion.pages.create(parent={"database_id": NOTION_DB_CALENDAR}, properties=properties)
+            created.append(new_page["id"])
+
+        return jsonify({"success": True, "created_ids": created})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar-posts/<post_id>", methods=["GET"])
+def get_calendar_post_detail(post_id):
+    try:
+        page = notion.pages.retrieve(post_id)
+        return jsonify(_serialize_calendar_post(page))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar-posts/<post_id>", methods=["PATCH"])
+def update_calendar_post(post_id):
+    """Edit text / date / channel from the Admin Calendar drawer."""
+    data = request.json or {}
+    try:
+        properties = {}
+        if data.get("channel"):
+            properties["Канал"] = {"select": {"name": data["channel"]}}
+        if data.get("date"):
+            properties["Дата на публикуване"] = {"date": {"start": data["date"]}}
+        if data.get("final_text") is not None:
+            properties["Финален текст"] = {"rich_text": [{"text": {"content": truncate(data["final_text"])}}]}
+        if data.get("visual_prompt") is not None:
+            properties["Visual Prompt"] = {"rich_text": [{"text": {"content": truncate(data["visual_prompt"])}}]}
+        if data.get("status"):
+            properties["Статус"] = {"select": {"name": data["status"]}}
+
+        notion.pages.update(page_id=post_id, properties=properties)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar-posts/send-for-approval", methods=["POST"])
+def bulk_send_for_approval():
+    """Bulk: payload {ids: [...]} -> Статус = 'Чака клиентско одобрение'."""
+    data = request.json or {}
+    ids = data.get("ids", [])
+    if not ids:
+        return jsonify({"error": "ids е задължителен"}), 400
+    try:
+        for pid in ids:
+            notion.pages.update(
+                page_id=pid,
+                properties={"Статус": {"select": {"name": "Чака клиентско одобрение"}}}
+            )
+        return jsonify({"success": True, "count": len(ids)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar-posts/<post_id>/send-for-approval", methods=["POST"])
+def send_for_approval(post_id):
+    try:
+        notion.pages.update(
+            page_id=post_id,
+            properties={"Статус": {"select": {"name": "Чака клиентско одобрение"}}}
+        )
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Client Calendar (token-based, public) ───────────────────────────────────
+
+def _resolve_client_by_token(token):
+    """Find the Brand Profile page matching the given Token. Returns (id, name) or (None, None)."""
+    if not token:
+        return None, None
+    try:
+        results = notion.databases.query(
+            database_id=NOTION_DB_BRAND,
+            filter={"property": "Token", "rich_text": {"equals": token}}
+        ).get("results", [])
+        if not results:
+            return None, None
+        page = results[0]
+        return page["id"], get_title(page.get("properties", {}).get("Клиент", {}))
+    except Exception:
+        return None, None
+
+
+@app.route("/api/client/<token>/posts", methods=["GET"])
+def client_get_posts(token):
+    client_id, client_name = _resolve_client_by_token(token)
+    if not client_id:
+        return jsonify({"error": "Невалиден или липсващ token"}), 403
+    try:
+        results = notion.databases.query(database_id=NOTION_DB_CALENDAR).get("results", [])
+        posts = [_serialize_calendar_post(p) for p in results]
+        visible_statuses = {"Чака клиентско одобрение", "Одобрено"}
+        posts = [p for p in posts if p["client_id"] == client_id and p["status"] in visible_statuses]
+        return jsonify({"client_name": client_name, "posts": posts})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/client/<token>/posts/<post_id>/approve", methods=["POST"])
+def client_approve_post(token, post_id):
+    client_id, _ = _resolve_client_by_token(token)
+    if not client_id:
+        return jsonify({"error": "Невалиден или липсващ token"}), 403
+    try:
+        page = notion.pages.retrieve(post_id)
+        post_client_id = get_relation_id(page.get("properties", {}).get("Клиент", {}))
+        if post_client_id != client_id:
+            return jsonify({"error": "Достъпът отказан"}), 403
+
+        notion.pages.update(
+            page_id=post_id,
+            properties={"Статус": {"select": {"name": "Одобрено"}}}
+        )
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/client/<token>/posts/<post_id>/request-fix", methods=["POST"])
+def client_request_fix(token, post_id):
+    client_id, _ = _resolve_client_by_token(token)
+    if not client_id:
+        return jsonify({"error": "Невалиден или липсващ token"}), 403
+    data = request.json or {}
+    comment = data.get("comment", "").strip()
+    if not comment:
+        return jsonify({"error": "comment е задължителен"}), 400
+    try:
+        page = notion.pages.retrieve(post_id)
+        post_client_id = get_relation_id(page.get("properties", {}).get("Клиент", {}))
+        if post_client_id != client_id:
+            return jsonify({"error": "Достъпът отказан"}), 403
+
+        notion.pages.update(
+            page_id=post_id,
+            properties={
+                "Статус": {"select": {"name": "Иска корекция"}},
+                "Клиентски коментар": {"rich_text": [{"text": {"content": truncate(comment)}}]},
+            }
+        )
+        return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -433,6 +698,25 @@ def debug_page(page_id):
         props = page.get("properties", {})
         debug = {k: {"type": v.get("type"), "preview": str(v)[:300]} for k, v in props.items()}
         return jsonify(debug)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/debug/clients-token", methods=["GET"])
+def debug_clients_token():
+    """Quick check: returns name + Token value for every Brand Profile."""
+    try:
+        results = notion.databases.query(database_id=NOTION_DB_BRAND).get("results", [])
+        out = []
+        for page in results:
+            props = page.get("properties", {})
+            raw = find_prop(props, "Token")
+            out.append({
+                "name": get_title(props.get("Клиент", {})),
+                "token_parsed": get_text(raw),
+                "prop_keys": list(props.keys())[:8],
+            })
+        return jsonify(out)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
